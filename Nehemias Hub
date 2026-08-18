@@ -1,0 +1,2016 @@
+--// SERVICIOS
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Stats = game:GetService("Stats")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local Camera = workspace.CurrentCamera
+local LocalPlayer = Players.LocalPlayer
+
+--// ESTADOS
+local ESPEnabled, LineEnabled, RainbowEnabled, HealthEnabled, SkeletonEnabled = false, false, false, false, false
+local FPSPingEnabled, AimbotFOVEnabled, HitboxEnabled = false, false, false
+local FlyEnabled, NoclipEnabled, InfiniteJumpEnabled = false, false, false
+
+--// SPEED / JUMP
+local SpeedEnabled = false
+local JumpEnabled = false
+
+--// DASH
+local DashEnabled = false
+local DashPowerValue = 120
+local DashCooldown = 1.2
+local DashReady = true
+
+local WalkSpeedValue, JumpPowerValue, FlySpeedValue = 16, 50, 60
+local FOVSize, AimbotSmoothness, HitboxSize = 120, 0.38, 5
+local ESPColor, Hue, ESPRadius = Color3.fromRGB(0, 170, 255), 0, 1000
+
+local Theme = {
+	Main = Color3.fromRGB(12, 18, 28),
+	Header = Color3.fromRGB(16, 24, 38),
+	Container = Color3.fromRGB(20, 28, 42),
+	Accent = Color3.fromRGB(0, 110, 190),
+	Stroke = Color3.fromRGB(0, 140, 220),
+	TextAccent = Color3.fromRGB(0, 180, 255),
+	ToggleOff = Color3.fromRGB(35, 50, 70)
+}
+
+local ESP, OriginalSizes = {}, {}
+local HitboxParts = {}
+local sliderFills = {}
+local activeToggles = {}
+
+local currentTarget = nil
+
+local Colors = {
+	{Name = "Rojo", Color = Color3.fromRGB(255, 50, 50)},
+	{Name = "Verde", Color = Color3.fromRGB(50, 255, 100)},
+	{Name = "Azul", Color = Color3.fromRGB(0, 170, 255)},
+	{Name = "Amarillo", Color = Color3.fromRGB(255, 220, 50)},
+	{Name = "Celeste", Color = Color3.fromRGB(0, 220, 255)},
+	{Name = "Blanco", Color = Color3.fromRGB(255, 255, 255)},
+	{Name = "Naranja", Color = Color3.fromRGB(255, 140, 0)},
+}
+
+local GUIThemes = {
+	{Name = "Azul Marino", Main = Color3.fromRGB(12, 18, 28), Header = Color3.fromRGB(16, 24, 38), Container = Color3.fromRGB(20, 28, 42), Accent = Color3.fromRGB(0, 110, 190), Stroke = Color3.fromRGB(0, 140, 220), TextAccent = Color3.fromRGB(0, 180, 255), ToggleOff = Color3.fromRGB(35, 50, 70)},
+	{Name = "Morado", Main = Color3.fromRGB(18, 12, 28), Header = Color3.fromRGB(26, 16, 40), Container = Color3.fromRGB(32, 22, 48), Accent = Color3.fromRGB(120, 60, 200), Stroke = Color3.fromRGB(150, 80, 255), TextAccent = Color3.fromRGB(180, 120, 255), ToggleOff = Color3.fromRGB(50, 35, 70)},
+	{Name = "Verde", Main = Color3.fromRGB(10, 22, 16), Header = Color3.fromRGB(14, 30, 22), Container = Color3.fromRGB(18, 36, 28), Accent = Color3.fromRGB(0, 150, 90), Stroke = Color3.fromRGB(0, 190, 120), TextAccent = Color3.fromRGB(40, 220, 140), ToggleOff = Color3.fromRGB(30, 55, 45)},
+	{Name = "Rojo", Main = Color3.fromRGB(24, 12, 14), Header = Color3.fromRGB(34, 16, 18), Container = Color3.fromRGB(42, 20, 24), Accent = Color3.fromRGB(190, 45, 55), Stroke = Color3.fromRGB(230, 60, 70), TextAccent = Color3.fromRGB(255, 90, 100), ToggleOff = Color3.fromRGB(60, 30, 35)},
+	{Name = "Naranja", Main = Color3.fromRGB(24, 16, 10), Header = Color3.fromRGB(34, 24, 14), Container = Color3.fromRGB(42, 30, 18), Accent = Color3.fromRGB(200, 110, 0), Stroke = Color3.fromRGB(255, 150, 0), TextAccent = Color3.fromRGB(255, 180, 60), ToggleOff = Color3.fromRGB(60, 45, 25)},
+	{Name = "Rosa", Main = Color3.fromRGB(24, 12, 20), Header = Color3.fromRGB(34, 16, 28), Container = Color3.fromRGB(42, 22, 36), Accent = Color3.fromRGB(200, 50, 140), Stroke = Color3.fromRGB(255, 80, 180), TextAccent = Color3.fromRGB(255, 120, 200), ToggleOff = Color3.fromRGB(60, 30, 50)},
+	{Name = "Celeste", Main = Color3.fromRGB(10, 18, 26), Header = Color3.fromRGB(14, 26, 36), Container = Color3.fromRGB(18, 32, 44), Accent = Color3.fromRGB(0, 150, 210), Stroke = Color3.fromRGB(0, 190, 255), TextAccent = Color3.fromRGB(60, 210, 255), ToggleOff = Color3.fromRGB(30, 50, 65)},
+}
+
+--// GUI
+local gui = Instance.new("ScreenGui")
+gui.Name = "NehemiasHub"
+gui.IgnoreGuiInset = true
+gui.ResetOnSpawn = false
+gui.DisplayOrder = 999999
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+gui.Parent = game.CoreGui
+
+local main = Instance.new("Frame")
+main.Size = UDim2.fromOffset(290, 400)
+main.Position = UDim2.fromScale(0.5, 0.5)
+main.AnchorPoint = Vector2.new(0.5, 0.5)
+main.BackgroundColor3 = Theme.Main
+main.BorderSizePixel = 0
+main.Active = true
+main.Draggable = true
+main.Parent = gui
+Instance.new("UICorner", main).CornerRadius = UDim.new(0, 11)
+
+local mainStroke = Instance.new("UIStroke", main)
+mainStroke.Color = Theme.Stroke
+mainStroke.Thickness = 1.5
+mainStroke.Transparency = 0.25
+
+local header = Instance.new("Frame", main)
+header.Size = UDim2.new(1, 0, 0, 42)
+header.BackgroundColor3 = Theme.Header
+header.BorderSizePixel = 0
+Instance.new("UICorner", header).CornerRadius = UDim.new(0, 11)
+
+local title = Instance.new("TextLabel", header)
+title.Size = UDim2.new(1, -42, 1, 0)
+title.Position = UDim2.fromOffset(12, 0)
+title.BackgroundTransparency = 1
+title.Text = "Nehemias Hub"
+title.Font = Enum.Font.GothamBold
+title.TextSize = 14
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.TextXAlignment = Enum.TextXAlignment.Left
+
+local version = Instance.new("TextLabel", header)
+version.Size = UDim2.new(1, -42, 0, 13)
+version.Position = UDim2.new(0, 12, 0, 24)
+version.BackgroundTransparency = 1
+version.Text = "Actualizado • v2.8"
+version.Font = Enum.Font.Gotham
+version.TextSize = 10
+version.TextColor3 = Color3.fromRGB(140, 180, 220)
+version.TextXAlignment = Enum.TextXAlignment.Left
+
+local closeBtn = Instance.new("TextButton", header)
+closeBtn.Size = UDim2.fromOffset(28, 28)
+closeBtn.Position = UDim2.new(1, -34, 0.5, -14)
+closeBtn.BackgroundColor3 = Color3.fromRGB(30, 40, 55)
+closeBtn.Text = "✕"
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.TextSize = 14
+closeBtn.TextColor3 = Color3.fromRGB(200, 220, 240)
+Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 6)
+
+local restoreBtn = Instance.new("TextButton", gui)
+restoreBtn.Size = UDim2.fromOffset(44, 44)
+restoreBtn.Position = UDim2.new(0, 10, 0.5, -22)
+restoreBtn.BackgroundColor3 = Theme.Accent
+restoreBtn.Text = "+"
+restoreBtn.Font = Enum.Font.GothamBold
+restoreBtn.TextSize = 28
+restoreBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+restoreBtn.Visible = false
+restoreBtn.ZIndex = 100
+restoreBtn.Active = true
+restoreBtn.Draggable = true
+Instance.new("UICorner", restoreBtn).CornerRadius = UDim.new(0, 11)
+
+local restoreStroke = Instance.new("UIStroke", restoreBtn)
+restoreStroke.Color = Theme.Stroke
+restoreStroke.Thickness = 2
+
+closeBtn.MouseButton1Click:Connect(function()
+	main.Visible = false
+	restoreBtn.Visible = true
+end)
+
+restoreBtn.MouseButton1Click:Connect(function()
+	main.Visible = true
+	restoreBtn.Visible = false
+end)
+
+local tabs = Instance.new("Frame", main)
+tabs.Size = UDim2.new(1, -16, 0, 30)
+tabs.Position = UDim2.fromOffset(8, 48)
+tabs.BackgroundTransparency = 1
+
+local featuresTab = Instance.new("TextButton", tabs)
+featuresTab.Size = UDim2.new(0.5, -2, 1, 0)
+featuresTab.BackgroundColor3 = Theme.Accent
+featuresTab.Text = "Features"
+featuresTab.Font = Enum.Font.GothamBold
+featuresTab.TextSize = 12
+featuresTab.TextColor3 = Color3.fromRGB(255, 255, 255)
+Instance.new("UICorner", featuresTab).CornerRadius = UDim.new(0, 6)
+
+local settingsTab = Instance.new("TextButton", tabs)
+settingsTab.Size = UDim2.new(0.5, -2, 1, 0)
+settingsTab.Position = UDim2.new(0.5, 2, 0, 0)
+settingsTab.BackgroundColor3 = Color3.fromRGB(25, 35, 50)
+settingsTab.Text = "Settings"
+settingsTab.Font = Enum.Font.GothamBold
+settingsTab.TextSize = 12
+settingsTab.TextColor3 = Color3.fromRGB(160, 190, 220)
+Instance.new("UICorner", settingsTab).CornerRadius = UDim.new(0, 6)
+
+local featuresContent = Instance.new("ScrollingFrame", main)
+featuresContent.Size = UDim2.new(1, -16, 1, -90)
+featuresContent.Position = UDim2.fromOffset(8, 84)
+featuresContent.BackgroundTransparency = 1
+featuresContent.BorderSizePixel = 0
+featuresContent.ScrollBarThickness = 3
+featuresContent.ScrollBarImageColor3 = Theme.Stroke
+featuresContent.CanvasSize = UDim2.fromOffset(0, 700)
+featuresContent.Visible = true
+
+local settingsContent = Instance.new("ScrollingFrame", main)
+settingsContent.Size = UDim2.new(1, -16, 1, -90)
+settingsContent.Position = UDim2.fromOffset(8, 84)
+settingsContent.BackgroundTransparency = 1
+settingsContent.BorderSizePixel = 0
+settingsContent.ScrollBarThickness = 3
+settingsContent.ScrollBarImageColor3 = Theme.Stroke
+settingsContent.CanvasSize = UDim2.fromOffset(0, 580)
+settingsContent.Visible = false
+
+local sectionLabels, toggleContainers, toggleIcons = {}, {}, {}
+
+local function createSection(parent, text, y)
+	local label = Instance.new("TextLabel", parent)
+	label.Size = UDim2.new(1, 0, 0, 18)
+	label.Position = UDim2.fromOffset(0, y)
+	label.BackgroundTransparency = 1
+	label.Text = text
+	label.Font = Enum.Font.GothamBold
+	label.TextSize = 11
+	label.TextColor3 = Theme.TextAccent
+	label.TextXAlignment = Enum.TextXAlignment.Left
+	table.insert(sectionLabels, label)
+	return y + 22
+end
+
+local function createToggle(parent, icon, text, desc, y, callback)
+	local container = Instance.new("Frame", parent)
+	container.Size = UDim2.new(1, 0, 0, 46)
+	container.Position = UDim2.fromOffset(0, y)
+	container.BackgroundColor3 = Theme.Container
+	container.BorderSizePixel = 0
+	Instance.new("UICorner", container).CornerRadius = UDim.new(0, 8)
+	table.insert(toggleContainers, container)
+
+	local iconLabel = Instance.new("TextLabel", container)
+	iconLabel.Size = UDim2.fromOffset(24, 24)
+	iconLabel.Position = UDim2.fromOffset(7, 11)
+	iconLabel.BackgroundTransparency = 1
+	iconLabel.Text = icon
+	iconLabel.Font = Enum.Font.GothamBold
+	iconLabel.TextSize = 15
+	iconLabel.TextColor3 = Theme.TextAccent
+	table.insert(toggleIcons, iconLabel)
+
+	local titleLbl = Instance.new("TextLabel", container)
+	titleLbl.Size = UDim2.new(1, -80, 0, 17)
+	titleLbl.Position = UDim2.fromOffset(34, 5)
+	titleLbl.BackgroundTransparency = 1
+	titleLbl.Text = text
+	titleLbl.Font = Enum.Font.GothamBold
+	titleLbl.TextSize = 12
+	titleLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
+	titleLbl.TextXAlignment = Enum.TextXAlignment.Left
+
+	local descLabel = Instance.new("TextLabel", container)
+	descLabel.Size = UDim2.new(1, -80, 0, 14)
+	descLabel.Position = UDim2.fromOffset(34, 23)
+	descLabel.BackgroundTransparency = 1
+	descLabel.Text = desc
+	descLabel.Font = Enum.Font.Gotham
+	descLabel.TextSize = 9
+	descLabel.TextColor3 = Color3.fromRGB(140, 170, 200)
+	descLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+	local toggleBg = Instance.new("Frame", container)
+	toggleBg.Size = UDim2.fromOffset(38, 20)
+	toggleBg.Position = UDim2.new(1, -46, 0.5, -10)
+	toggleBg.BackgroundColor3 = Theme.ToggleOff
+	Instance.new("UICorner", toggleBg).CornerRadius = UDim.new(1, 0)
+
+	local toggleCircle = Instance.new("Frame", toggleBg)
+	toggleCircle.Size = UDim2.fromOffset(14, 14)
+	toggleCircle.Position = UDim2.fromOffset(3, 3)
+	toggleCircle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+	Instance.new("UICorner", toggleCircle).CornerRadius = UDim.new(1, 0)
+
+	local state = false
+	local btn = Instance.new("TextButton", container)
+	btn.Size = UDim2.new(1, 0, 1, 0)
+	btn.BackgroundTransparency = 1
+	btn.Text = ""
+
+	local toggleData = {
+		bg = toggleBg,
+		circle = toggleCircle,
+		isOn = function()
+			return state
+		end,
+
+		setOn = function(v)
+			state = v
+
+			if state then
+				toggleBg.BackgroundColor3 = Theme.Accent
+				toggleCircle.Position = UDim2.fromOffset(21, 3)
+			else
+				toggleBg.BackgroundColor3 = Theme.ToggleOff
+				toggleCircle.Position = UDim2.fromOffset(3, 3)
+			end
+		end
+	}
+
+	table.insert(activeToggles, toggleData)
+
+	btn.MouseButton1Click:Connect(function()
+		state = not state
+		toggleData.setOn(state)
+		callback(state)
+	end)
+
+	return y + 52
+end
+
+local function createSlider(parent, text, desc, y, min, max, default, callback)
+	local frame = Instance.new("Frame", parent)
+	frame.Size = UDim2.new(1, 0, 0, 50)
+	frame.Position = UDim2.fromOffset(0, y)
+	frame.BackgroundTransparency = 1
+
+	local titleLbl = Instance.new("TextLabel", frame)
+	titleLbl.Size = UDim2.new(0.7, 0, 0, 15)
+	titleLbl.Position = UDim2.fromOffset(2, 1)
+	titleLbl.BackgroundTransparency = 1
+	titleLbl.Text = text
+	titleLbl.Font = Enum.Font.GothamBold
+	titleLbl.TextSize = 11
+	titleLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
+	titleLbl.TextXAlignment = Enum.TextXAlignment.Left
+
+	local valueLabel = Instance.new("TextLabel", frame)
+	valueLabel.Size = UDim2.new(0.3, -2, 0, 15)
+	valueLabel.Position = UDim2.new(0.7, 0, 0, 1)
+	valueLabel.BackgroundTransparency = 1
+	valueLabel.Text = tostring(default)
+	valueLabel.Font = Enum.Font.GothamBold
+	valueLabel.TextSize = 11
+	valueLabel.TextColor3 = Theme.TextAccent
+	valueLabel.TextXAlignment = Enum.TextXAlignment.Right
+
+	local descLabel = Instance.new("TextLabel", frame)
+	descLabel.Size = UDim2.new(1, 0, 0, 12)
+	descLabel.Position = UDim2.fromOffset(2, 16)
+	descLabel.BackgroundTransparency = 1
+	descLabel.Text = desc
+	descLabel.Font = Enum.Font.Gotham
+	descLabel.TextSize = 9
+	descLabel.TextColor3 = Color3.fromRGB(130, 160, 190)
+	descLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+	local barBg = Instance.new("Frame", frame)
+	barBg.Size = UDim2.new(1, -4, 0, 5)
+	barBg.Position = UDim2.fromOffset(2, 35)
+	barBg.BackgroundColor3 = Color3.fromRGB(30, 45, 65)
+	Instance.new("UICorner", barBg).CornerRadius = UDim.new(1, 0)
+
+	local barFill = Instance.new("Frame", barBg)
+	barFill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
+	barFill.BackgroundColor3 = Theme.Accent
+	Instance.new("UICorner", barFill).CornerRadius = UDim.new(1, 0)
+
+	table.insert(sliderFills, {
+		Fill = barFill,
+		ValueLabel = valueLabel
+	})
+
+	local dragging = false
+
+	local button = Instance.new("TextButton", barBg)
+	button.Size = UDim2.new(1, 0, 1, 0)
+	button.BackgroundTransparency = 1
+	button.Text = ""
+
+	local function update(input)
+		local pos = math.clamp(
+			(input.Position.X - barBg.AbsolutePosition.X) / barBg.AbsoluteSize.X,
+			0,
+			1
+		)
+
+		local value = math.floor(min + (max - min) * pos)
+
+		barFill.Size = UDim2.new(pos, 0, 1, 0)
+		valueLabel.Text = tostring(value)
+
+		callback(value)
+	end
+
+	button.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1
+			or input.UserInputType == Enum.UserInputType.Touch then
+
+			dragging = true
+			update(input)
+		end
+	end)
+
+	button.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1
+			or input.UserInputType == Enum.UserInputType.Touch then
+
+			dragging = false
+		end
+	end)
+
+	UserInputService.InputChanged:Connect(function(input)
+		if dragging
+			and (
+				input.UserInputType == Enum.UserInputType.MouseMovement
+				or input.UserInputType == Enum.UserInputType.Touch
+			) then
+
+			update(input)
+		end
+	end)
+
+	return y + 56
+end
+
+--// FOV + STATS
+local fovCircle = Instance.new("Frame", gui)
+fovCircle.AnchorPoint = Vector2.new(0.5, 0.5)
+fovCircle.Position = UDim2.fromScale(0.5, 0.5)
+fovCircle.Size = UDim2.fromOffset(FOVSize, FOVSize)
+fovCircle.BackgroundTransparency = 1
+fovCircle.Visible = false
+fovCircle.ZIndex = 50
+
+Instance.new("UICorner", fovCircle).CornerRadius = UDim.new(1, 0)
+
+local fovStroke = Instance.new("UIStroke", fovCircle)
+fovStroke.Color = Color3.fromRGB(0, 180, 255)
+fovStroke.Thickness = 2
+fovStroke.Transparency = 0.3
+
+local statsFrame = Instance.new("Frame", gui)
+statsFrame.Size = UDim2.fromOffset(155, 26)
+statsFrame.Position = UDim2.new(1, -165, 0, 8)
+statsFrame.BackgroundColor3 = Theme.Container
+statsFrame.BackgroundTransparency = 0.05
+statsFrame.BorderSizePixel = 0
+statsFrame.Visible = false
+statsFrame.ZIndex = 2000
+
+Instance.new("UICorner", statsFrame).CornerRadius = UDim.new(0, 7)
+
+local statsStroke = Instance.new("UIStroke", statsFrame)
+statsStroke.Color = Theme.Stroke
+statsStroke.Thickness = 1.6
+
+local fpsText = Instance.new("TextLabel", statsFrame)
+fpsText.Size = UDim2.fromOffset(70, 26)
+fpsText.Position = UDim2.fromOffset(10, 0)
+fpsText.BackgroundTransparency = 1
+fpsText.Font = Enum.Font.GothamBold
+fpsText.TextSize = 11
+fpsText.TextColor3 = Color3.fromRGB(0, 255, 0)
+fpsText.Text = "FPS: --"
+fpsText.TextXAlignment = Enum.TextXAlignment.Left
+fpsText.ZIndex = 2002
+
+local separator = Instance.new("TextLabel", statsFrame)
+separator.Size = UDim2.fromOffset(8, 26)
+separator.Position = UDim2.fromOffset(70, 0)
+separator.BackgroundTransparency = 1
+separator.Text = "|"
+separator.Font = Enum.Font.GothamBold
+separator.TextSize = 13
+separator.TextColor3 = Theme.TextAccent
+separator.ZIndex = 2002
+
+local pingText = Instance.new("TextLabel", statsFrame)
+pingText.Size = UDim2.fromOffset(70, 26)
+pingText.Position = UDim2.fromOffset(80, 0)
+pingText.BackgroundTransparency = 1
+pingText.Font = Enum.Font.GothamBold
+pingText.TextSize = 11
+pingText.TextColor3 = Color3.fromRGB(0, 255, 0)
+pingText.Text = "PING: --"
+pingText.TextXAlignment = Enum.TextXAlignment.Left
+pingText.ZIndex = 2002
+
+--// DASH BUTTON
+-- UI completamente vectorial para evitar emojis/cuadrados en iPhone.
+local dashButton = Instance.new("TextButton", gui)
+dashButton.Name = "DashButton"
+dashButton.Size = UDim2.fromOffset(62, 62)
+
+-- Un poco más arriba y a la derecha.
+dashButton.Position = UDim2.new(0, 95, 0.60, 0)
+
+dashButton.AnchorPoint = Vector2.new(0.5, 0.5)
+dashButton.BackgroundColor3 = Theme.Container
+dashButton.BackgroundTransparency = 0.28
+dashButton.BorderSizePixel = 0
+dashButton.Text = ""
+dashButton.AutoButtonColor = false
+dashButton.Visible = false
+dashButton.ZIndex = 3000
+dashButton.Active = true
+
+local dashCorner = Instance.new("UICorner", dashButton)
+dashCorner.CornerRadius = UDim.new(1, 0)
+
+local dashStroke = Instance.new("UIStroke", dashButton)
+dashStroke.Color = Theme.Stroke
+dashStroke.Thickness = 2
+dashStroke.Transparency = 0.15
+
+local dashIcon = Instance.new("Frame", dashButton)
+dashIcon.Size = UDim2.fromOffset(34, 34)
+dashIcon.Position = UDim2.fromScale(0.5, 0.5)
+dashIcon.AnchorPoint = Vector2.new(0.5, 0.5)
+dashIcon.BackgroundTransparency = 1
+dashIcon.ZIndex = 3001
+
+local dashLine1 = Instance.new("Frame", dashIcon)
+dashLine1.Size = UDim2.fromOffset(19, 4)
+dashLine1.Position = UDim2.fromOffset(4, 15)
+dashLine1.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+dashLine1.BorderSizePixel = 0
+dashLine1.Rotation = -18
+dashLine1.ZIndex = 3002
+Instance.new("UICorner", dashLine1).CornerRadius = UDim.new(1, 0)
+
+local dashLine2 = Instance.new("Frame", dashIcon)
+dashLine2.Size = UDim2.fromOffset(13, 4)
+dashLine2.Position = UDim2.fromOffset(1, 9)
+dashLine2.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+dashLine2.BorderSizePixel = 0
+dashLine2.Rotation = -18
+dashLine2.ZIndex = 3002
+Instance.new("UICorner", dashLine2).CornerRadius = UDim.new(1, 0)
+
+local dashLine3 = Instance.new("Frame", dashIcon)
+dashLine3.Size = UDim2.fromOffset(11, 4)
+dashLine3.Position = UDim2.fromOffset(2, 22)
+dashLine3.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+dashLine3.BorderSizePixel = 0
+dashLine3.Rotation = -18
+dashLine3.ZIndex = 3002
+Instance.new("UICorner", dashLine3).CornerRadius = UDim.new(1, 0)
+
+local dashArrow = Instance.new("Frame", dashIcon)
+dashArrow.Size = UDim2.fromOffset(14, 14)
+dashArrow.Position = UDim2.fromOffset(19, 10)
+dashArrow.BackgroundTransparency = 1
+dashArrow.Rotation = 45
+dashArrow.ZIndex = 3003
+
+local arrowA = Instance.new("Frame", dashArrow)
+arrowA.Size = UDim2.fromOffset(15, 4)
+arrowA.Position = UDim2.fromOffset(0, 5)
+arrowA.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+arrowA.BorderSizePixel = 0
+arrowA.ZIndex = 3004
+Instance.new("UICorner", arrowA).CornerRadius = UDim.new(1, 0)
+
+local arrowB = Instance.new("Frame", dashArrow)
+arrowB.Size = UDim2.fromOffset(4, 15)
+arrowB.Position = UDim2.fromOffset(5, 0)
+arrowB.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+arrowB.BorderSizePixel = 0
+arrowB.ZIndex = 3004
+Instance.new("UICorner", arrowB).CornerRadius = UDim.new(1, 0)
+
+local dashCooldownText = Instance.new("TextLabel", dashButton)
+dashCooldownText.Size = UDim2.fromScale(1, 1)
+dashCooldownText.Position = UDim2.fromScale(0, 0)
+dashCooldownText.BackgroundTransparency = 1
+dashCooldownText.Text = ""
+dashCooldownText.Font = Enum.Font.GothamBold
+dashCooldownText.TextSize = 12
+dashCooldownText.TextColor3 = Color3.fromRGB(255, 255, 255)
+dashCooldownText.ZIndex = 3010
+
+--// TEMA
+local function ApplyTheme(newTheme)
+	Theme = newTheme
+
+	main.BackgroundColor3 = Theme.Main
+	mainStroke.Color = Theme.Stroke
+	header.BackgroundColor3 = Theme.Header
+	featuresTab.BackgroundColor3 = Theme.Accent
+	restoreBtn.BackgroundColor3 = Theme.Accent
+	restoreStroke.Color = Theme.Stroke
+	featuresContent.ScrollBarImageColor3 = Theme.Stroke
+	settingsContent.ScrollBarImageColor3 = Theme.Stroke
+
+	statsFrame.BackgroundColor3 = Theme.Container
+	statsFrame.BackgroundTransparency = 0.05
+	statsStroke.Color = Theme.Stroke
+	separator.TextColor3 = Theme.TextAccent
+
+	dashButton.BackgroundColor3 = Theme.Container
+	dashStroke.Color = Theme.Stroke
+
+	for _, label in pairs(sectionLabels) do
+		if label and label.Parent then
+			label.TextColor3 = Theme.TextAccent
+		end
+	end
+
+	for _, container in pairs(toggleContainers) do
+		if container and container.Parent then
+			container.BackgroundColor3 = Theme.Container
+		end
+	end
+
+	for _, icon in pairs(toggleIcons) do
+		if icon and icon.Parent then
+			icon.TextColor3 = Theme.TextAccent
+		end
+	end
+
+	for _, data in pairs(sliderFills) do
+		if data and data.Fill and data.Fill.Parent then
+			data.Fill.BackgroundColor3 = Theme.Accent
+		end
+
+		if data and data.ValueLabel and data.ValueLabel.Parent then
+			data.ValueLabel.TextColor3 = Theme.TextAccent
+		end
+	end
+
+	for _, t in pairs(activeToggles) do
+		if t and t.bg and t.bg.Parent then
+			t.bg.BackgroundColor3 = t.isOn() and Theme.Accent or Theme.ToggleOff
+		end
+	end
+
+	fovStroke.Color = Theme.Stroke
+end
+
+-- ==================== FEATURES ====================
+local y = 0
+
+y = createSection(featuresContent, "👁  ESP", y)
+
+y = createToggle(
+	featuresContent,
+	"👁",
+	"ESP",
+	"Activar/desactivar el ESP principal",
+	y,
+	function(v)
+		ESPEnabled = v
+	end
+)
+
+y = createToggle(
+	featuresContent,
+	"👁",
+	"LINE",
+	"Líneas hacia los jugadores",
+	y,
+	function(v)
+		LineEnabled = v
+	end
+)
+
+y = createToggle(
+	featuresContent,
+	"👁",
+	"RAINBOW",
+	"Color arcoíris",
+	y,
+	function(v)
+		RainbowEnabled = v
+	end
+)
+
+y = createToggle(
+	featuresContent,
+	"👁",
+	"HEALTH",
+	"Barra de vida",
+	y,
+	function(v)
+		HealthEnabled = v
+	end
+)
+
+y = createToggle(
+	featuresContent,
+	"👁",
+	"SKELETON",
+	"Esqueleto",
+	y,
+	function(v)
+		SkeletonEnabled = v
+	end
+)
+
+y = createSection(featuresContent, "🎯  Hitbox y Aimbot", y + 5)
+
+y = createToggle(
+	featuresContent,
+	"🎯",
+	"HITBOX",
+	"Agrandar hitbox de jugadores",
+	y,
+	function(v)
+		HitboxEnabled = v
+	end
+)
+
+y = createToggle(
+	featuresContent,
+	"🎯",
+	"AIMBOT FOV",
+	"Aimbot con círculo FOV",
+	y,
+	function(v)
+		AimbotFOVEnabled = v
+	end
+)
+
+y = createSection(featuresContent, "⚡  Universal", y + 5)
+
+y = createToggle(
+	featuresContent,
+	"⚡",
+	"FLY",
+	"Volar (joystick)",
+	y,
+	function(v)
+		FlyEnabled = v
+	end
+)
+
+y = createToggle(
+	featuresContent,
+	"⚡",
+	"NOCLIP",
+	"Atravesar paredes",
+	y,
+	function(v)
+		NoclipEnabled = v
+	end
+)
+
+y = createToggle(
+	featuresContent,
+	"⚡",
+	"INF JUMP",
+	"Salto infinito",
+	y,
+	function(v)
+		InfiniteJumpEnabled = v
+	end
+)
+
+-- SPEED ON/OFF
+y = createToggle(
+	featuresContent,
+	"⚡",
+	"SPEED",
+	"Activar/desactivar Speed",
+	y,
+	function(v)
+		SpeedEnabled = v
+	end
+)
+
+-- JUMP ON/OFF
+y = createToggle(
+	featuresContent,
+	"⚡",
+	"JUMP",
+	"Activar/desactivar Jump Power",
+	y,
+	function(v)
+		JumpEnabled = v
+	end
+)
+
+-- DASH
+y = createToggle(
+	featuresContent,
+	"➤",
+	"DASH",
+	"Dash hacia delante con cooldown",
+	y,
+	function(v)
+		DashEnabled = v
+		dashButton.Visible = v
+	end
+)
+
+y = createToggle(
+	featuresContent,
+	"⚡",
+	"FPS + PING",
+	"Mostrar FPS y Ping",
+	y,
+	function(v)
+		FPSPingEnabled = v
+	end
+)
+
+featuresContent.CanvasSize = UDim2.fromOffset(0, y + 15)
+
+-- ==================== SETTINGS ====================
+local sy = 0
+
+sy = createSlider(
+	settingsContent,
+	"FOV Circle Size",
+	"Tamaño del círculo Aimbot",
+	sy,
+	40,
+	350,
+	120,
+	function(v)
+		FOVSize = v
+	end
+)
+
+sy = createSlider(
+	settingsContent,
+	"Hitbox Expander",
+	"Tamaño de la Hitbox",
+	sy,
+	1,
+	25,
+	5,
+	function(v)
+		HitboxSize = v
+	end
+)
+
+sy = createSlider(
+	settingsContent,
+	"Speed",
+	"Velocidad de caminar",
+	sy,
+	16,
+	200,
+	16,
+	function(v)
+		WalkSpeedValue = v
+	end
+)
+
+sy = createSlider(
+	settingsContent,
+	"Jump Power",
+	"Fuerza de salto",
+	sy,
+	50,
+	300,
+	50,
+	function(v)
+		JumpPowerValue = v
+	end
+)
+
+sy = createSlider(
+	settingsContent,
+	"Aimbot Smoothness",
+	"Más alto = más pegajoso",
+	sy,
+	10,
+	60,
+	38,
+	function(v)
+		AimbotSmoothness = v / 100
+	end
+)
+
+-- DASH POWER
+sy = createSlider(
+	settingsContent,
+	"Dash Power",
+	"Potencia del Dash hacia delante",
+	sy,
+	60,
+	250,
+	120,
+	function(v)
+		DashPowerValue = v
+	end
+)
+
+-- ESP Colors
+local colorFrame = Instance.new("Frame", settingsContent)
+colorFrame.Size = UDim2.new(1, 0, 0, 50)
+colorFrame.Position = UDim2.fromOffset(0, sy + 6)
+colorFrame.BackgroundTransparency = 1
+
+local colorTitle = Instance.new("TextLabel", colorFrame)
+colorTitle.Size = UDim2.new(1, 0, 0, 16)
+colorTitle.BackgroundTransparency = 1
+colorTitle.Text = "ESP Colors"
+colorTitle.Font = Enum.Font.GothamBold
+colorTitle.TextSize = 11
+colorTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+colorTitle.TextXAlignment = Enum.TextXAlignment.Left
+
+local colorContainer = Instance.new("Frame", colorFrame)
+colorContainer.Size = UDim2.new(1, 0, 0, 26)
+colorContainer.Position = UDim2.fromOffset(0, 20)
+colorContainer.BackgroundTransparency = 1
+
+for i, data in ipairs(Colors) do
+	local btn = Instance.new("TextButton", colorContainer)
+
+	btn.Size = UDim2.fromOffset(24, 24)
+	btn.Position = UDim2.fromOffset((i - 1) * 30, 1)
+	btn.BackgroundColor3 = data.Color
+	btn.Text = ""
+
+	Instance.new("UICorner", btn).CornerRadius = UDim.new(1, 0)
+
+	local stroke = Instance.new("UIStroke", btn)
+	stroke.Color = Color3.fromRGB(255, 255, 255)
+	stroke.Thickness = 0
+
+	btn.MouseButton1Click:Connect(function()
+		ESPColor = data.Color
+		RainbowEnabled = false
+
+		for _, child in pairs(colorContainer:GetChildren()) do
+			if child:IsA("TextButton") then
+				local s = child:FindFirstChildOfClass("UIStroke")
+
+				if s then
+					s.Thickness = 0
+				end
+			end
+		end
+
+		stroke.Thickness = 2
+	end)
+end
+
+-- GUI Colors
+local guiColorFrame = Instance.new("Frame", settingsContent)
+guiColorFrame.Size = UDim2.new(1, 0, 0, 50)
+guiColorFrame.Position = UDim2.fromOffset(0, sy + 62)
+guiColorFrame.BackgroundTransparency = 1
+
+local guiColorTitle = Instance.new("TextLabel", guiColorFrame)
+guiColorTitle.Size = UDim2.new(1, 0, 0, 16)
+guiColorTitle.BackgroundTransparency = 1
+guiColorTitle.Text = "GUI Colors"
+guiColorTitle.Font = Enum.Font.GothamBold
+guiColorTitle.TextSize = 11
+guiColorTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+guiColorTitle.TextXAlignment = Enum.TextXAlignment.Left
+
+local guiColorContainer = Instance.new("Frame", settingsContent)
+guiColorContainer.Size = UDim2.new(1, 0, 0, 26)
+guiColorContainer.Position = UDim2.fromOffset(0, sy + 82)
+guiColorContainer.BackgroundTransparency = 1
+
+for i, data in ipairs(GUIThemes) do
+	local btn = Instance.new("TextButton", guiColorContainer)
+
+	btn.Size = UDim2.fromOffset(24, 24)
+	btn.Position = UDim2.fromOffset((i - 1) * 30, 1)
+	btn.BackgroundColor3 = data.Accent
+	btn.Text = ""
+
+	Instance.new("UICorner", btn).CornerRadius = UDim.new(1, 0)
+
+	local stroke = Instance.new("UIStroke", btn)
+	stroke.Color = Color3.fromRGB(255, 255, 255)
+	stroke.Thickness = 0
+
+	btn.MouseButton1Click:Connect(function()
+		ApplyTheme(data)
+
+		for _, child in pairs(guiColorContainer:GetChildren()) do
+			if child:IsA("TextButton") then
+				local s = child:FindFirstChildOfClass("UIStroke")
+
+				if s then
+					s.Thickness = 0
+				end
+			end
+		end
+
+		stroke.Thickness = 2
+	end)
+end
+
+settingsContent.CanvasSize = UDim2.fromOffset(0, sy + 145)
+
+--// TABS
+featuresTab.MouseButton1Click:Connect(function()
+	featuresTab.BackgroundColor3 = Theme.Accent
+	featuresTab.TextColor3 = Color3.fromRGB(255, 255, 255)
+
+	settingsTab.BackgroundColor3 = Color3.fromRGB(25, 35, 50)
+	settingsTab.TextColor3 = Color3.fromRGB(160, 190, 220)
+
+	featuresContent.Visible = true
+	settingsContent.Visible = false
+end)
+
+settingsTab.MouseButton1Click:Connect(function()
+	settingsTab.BackgroundColor3 = Theme.Accent
+	settingsTab.TextColor3 = Color3.fromRGB(255, 255, 255)
+
+	featuresTab.BackgroundColor3 = Color3.fromRGB(25, 35, 50)
+	featuresTab.TextColor3 = Color3.fromRGB(160, 190, 220)
+
+	featuresContent.Visible = false
+	settingsContent.Visible = true
+end)
+
+--// DASH SYSTEM
+local function DoDash()
+	if not DashEnabled then
+		return
+	end
+
+	if not DashReady then
+		return
+	end
+
+	local char = LocalPlayer.Character
+
+	if not char then
+		return
+	end
+
+	local root = char:FindFirstChild("HumanoidRootPart")
+	local humanoid = char:FindFirstChildOfClass("Humanoid")
+
+	if not root or not humanoid or humanoid.Health <= 0 then
+		return
+	end
+
+	DashReady = false
+
+	local look = root.CFrame.LookVector
+
+	local direction = Vector3.new(
+		look.X,
+		0,
+		look.Z
+	)
+
+	if direction.Magnitude <= 0 then
+		DashReady = true
+		return
+	end
+
+	direction = direction.Unit
+
+	local currentVelocity = root.AssemblyLinearVelocity
+
+	root.AssemblyLinearVelocity = Vector3.new(
+		direction.X * DashPowerValue,
+		currentVelocity.Y,
+		direction.Z * DashPowerValue
+	)
+
+	local originalSize = dashIcon.Size
+
+	local dashTween1 = TweenService:Create(
+		dashIcon,
+		TweenInfo.new(
+			0.10,
+			Enum.EasingStyle.Quad,
+			Enum.EasingDirection.Out
+		),
+		{
+			Position = UDim2.new(0.5, 9, 0.5, 0),
+			Size = UDim2.fromOffset(39, 39)
+		}
+	)
+
+	local dashTween2 = TweenService:Create(
+		dashIcon,
+		TweenInfo.new(
+			0.18,
+			Enum.EasingStyle.Quad,
+			Enum.EasingDirection.Out
+		),
+		{
+			Position = UDim2.new(0.5, 0, 0.5, 0),
+			Size = originalSize
+		}
+	)
+
+	dashTween1:Play()
+
+	dashTween1.Completed:Connect(function()
+		if dashIcon and dashIcon.Parent then
+			dashTween2:Play()
+		end
+	end)
+
+	task.spawn(function()
+		local startTime = tick()
+
+		while tick() - startTime < DashCooldown do
+			if not dashButton.Parent then
+				break
+			end
+
+			local remaining =
+				DashCooldown - (tick() - startTime)
+
+			dashCooldownText.Text =
+				string.format(
+					"%.1f",
+					math.max(remaining, 0)
+				)
+
+			dashCooldownText.TextColor3 =
+				Color3.fromRGB(170, 190, 210)
+
+			task.wait(0.05)
+		end
+
+		dashCooldownText.Text = ""
+		dashCooldownText.TextColor3 =
+			Color3.fromRGB(255, 255, 255)
+
+		DashReady = true
+	end)
+end
+
+dashButton.MouseButton1Click:Connect(function()
+	DoDash()
+end)
+
+--// ESP SYSTEM
+local function create(plr)
+	if plr == LocalPlayer then
+		return
+	end
+
+	local h = Instance.new("Highlight")
+
+	h.FillTransparency = 0.5
+	h.OutlineTransparency = 0
+	h.Parent = game.CoreGui
+
+	local name = Instance.new("TextLabel")
+
+	name.BackgroundTransparency = 1
+	name.Size = UDim2.fromOffset(200, 18)
+	name.AnchorPoint = Vector2.new(0.5, 1)
+	name.Font = Enum.Font.GothamBold
+	name.TextSize = 13
+	name.TextStrokeTransparency = 0
+	name.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+	name.Visible = false
+	name.ZIndex = 500
+	name.Parent = gui
+
+	local line = Instance.new("Frame")
+
+	line.BorderSizePixel = 0
+	line.AnchorPoint = Vector2.new(0.5, 0.5)
+	line.Size = UDim2.fromOffset(0, 2)
+	line.Visible = false
+	line.ZIndex = 499
+	line.Parent = gui
+
+	local healthBar = Instance.new("Frame")
+
+	healthBar.BorderSizePixel = 0
+	healthBar.Size = UDim2.fromOffset(7, 65)
+	healthBar.Visible = false
+	healthBar.ZIndex = 501
+	healthBar.Parent = gui
+
+	Instance.new("UICorner", healthBar).CornerRadius =
+		UDim.new(0, 3)
+
+	local healthText = Instance.new("TextLabel")
+
+	healthText.BackgroundTransparency = 1
+	healthText.Size = UDim2.fromOffset(36, 65)
+	healthText.AnchorPoint = Vector2.new(0.5, 0.5)
+	healthText.Font = Enum.Font.GothamBold
+	healthText.TextSize = 9
+	healthText.Rotation = 90
+	healthText.Visible = false
+	healthText.ZIndex = 502
+	healthText.Parent = gui
+
+	local distance = Instance.new("TextLabel")
+
+	distance.BackgroundTransparency = 1
+	distance.Size = UDim2.fromOffset(110, 16)
+	distance.AnchorPoint = Vector2.new(0.5, 0)
+	distance.Font = Enum.Font.GothamBold
+	distance.TextSize = 12
+	distance.TextStrokeTransparency = 0
+	distance.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+	distance.Visible = false
+	distance.ZIndex = 500
+	distance.Parent = gui
+
+	local skeleton = {}
+
+	for i = 1, 14 do
+		local l = Instance.new("Frame")
+
+		l.BorderSizePixel = 0
+		l.AnchorPoint = Vector2.new(0.5, 0.5)
+		l.Size = UDim2.fromOffset(0, 2)
+		l.Visible = false
+		l.ZIndex = 498
+		l.Parent = gui
+
+		skeleton[i] = l
+	end
+
+	ESP[plr] = {
+		H = h,
+		N = name,
+		L = line,
+		HB = healthBar,
+		HT = healthText,
+		D = distance,
+		S = skeleton
+	}
+end
+
+local function remove(plr)
+	if ESP[plr] then
+		pcall(function()
+			ESP[plr].H:Destroy()
+			ESP[plr].N:Destroy()
+			ESP[plr].L:Destroy()
+			ESP[plr].HB:Destroy()
+			ESP[plr].HT:Destroy()
+			ESP[plr].D:Destroy()
+
+			for _, l in pairs(ESP[plr].S) do
+				l:Destroy()
+			end
+		end)
+
+		ESP[plr] = nil
+	end
+
+	OriginalSizes[plr] = nil
+
+	if HitboxParts[plr] then
+		HitboxParts[plr]:Destroy()
+		HitboxParts[plr] = nil
+	end
+end
+
+for _, p in pairs(Players:GetPlayers()) do
+	create(p)
+end
+
+Players.PlayerAdded:Connect(create)
+Players.PlayerRemoving:Connect(remove)
+
+local function drawLine(line, p1, p2, color)
+	if not p1 or not p2 then
+		line.Visible = false
+		return
+	end
+
+	local dx = p2.X - p1.X
+	local dy = p2.Y - p1.Y
+
+	local length =
+		math.sqrt(dx * dx + dy * dy)
+
+	line.Size =
+		UDim2.fromOffset(
+			math.max(length, 1),
+			2
+		)
+
+	line.Position =
+		UDim2.fromOffset(
+			(p1.X + p2.X) / 2,
+			(p1.Y + p2.Y) / 2
+		)
+
+	line.Rotation =
+		math.deg(math.atan2(dy, dx))
+
+	line.BackgroundColor3 = color
+	line.Visible = true
+end
+
+--// AIMBOT
+local function GetClosestHeadInFOV()
+	local center = Vector2.new(
+		Camera.ViewportSize.X / 2,
+		Camera.ViewportSize.Y / 2
+	)
+
+	local maxDist = FOVSize / 2
+
+	if currentTarget and currentTarget.Parent then
+		local hum =
+			currentTarget.Parent:FindFirstChildOfClass("Humanoid")
+
+		if hum and hum.Health > 0 then
+			local pos, onScreen =
+				Camera:WorldToViewportPoint(
+					currentTarget.Position
+				)
+
+			if onScreen then
+				local screenPos =
+					Vector2.new(pos.X, pos.Y)
+
+				local dist =
+					(center - screenPos).Magnitude
+
+				if dist < maxDist * 1.4 then
+					return currentTarget
+				end
+			end
+		end
+	end
+
+	local closest = nil
+	local shortest = maxDist
+
+	for _, player in pairs(Players:GetPlayers()) do
+		if player ~= LocalPlayer and player.Character then
+			local head =
+				player.Character:FindFirstChild("Head")
+
+			local humanoid =
+				player.Character:FindFirstChildOfClass("Humanoid")
+
+			if head and humanoid and humanoid.Health > 0 then
+				local pos, onScreen =
+					Camera:WorldToViewportPoint(
+						head.Position
+					)
+
+				if onScreen then
+					local screenPos =
+						Vector2.new(pos.X, pos.Y)
+
+					local distance =
+						(center - screenPos).Magnitude
+
+					if distance < shortest then
+						shortest = distance
+						closest = head
+					end
+				end
+			end
+		end
+	end
+
+	currentTarget = closest
+
+	return closest
+end
+
+--// FLY
+local BodyVelocity, BodyGyro
+
+local function UpdateFly()
+	local char = LocalPlayer.Character
+
+	if not char
+		or not char:FindFirstChild("HumanoidRootPart") then
+		return
+	end
+
+	local root = char.HumanoidRootPart
+	local humanoid = char:FindFirstChildOfClass("Humanoid")
+
+	if FlyEnabled then
+		if not BodyVelocity then
+			BodyVelocity = Instance.new("BodyVelocity")
+			BodyVelocity.MaxForce =
+				Vector3.new(9e9, 9e9, 9e9)
+			BodyVelocity.Parent = root
+
+			BodyGyro = Instance.new("BodyGyro")
+			BodyGyro.MaxTorque =
+				Vector3.new(9e9, 9e9, 9e9)
+			BodyGyro.P = 9e4
+			BodyGyro.Parent = root
+
+			if humanoid then
+				humanoid.PlatformStand = true
+			end
+		end
+
+		local cam = Camera.CFrame
+		local move =
+			humanoid and humanoid.MoveDirection
+			or Vector3.zero
+
+		local dir =
+			(cam.LookVector * -move.Z)
+			+ (cam.RightVector * move.X)
+
+		BodyVelocity.Velocity =
+			dir.Magnitude > 0
+			and dir.Unit * FlySpeedValue
+			or Vector3.zero
+
+		BodyGyro.CFrame = cam
+	else
+		if BodyVelocity then
+			BodyVelocity:Destroy()
+			BodyVelocity = nil
+		end
+
+		if BodyGyro then
+			BodyGyro:Destroy()
+			BodyGyro = nil
+		end
+
+		if humanoid then
+			humanoid.PlatformStand = false
+		end
+	end
+end
+
+--// HITBOX REAL + VISIBLE
+local function UpdateHitbox()
+	for _, player in pairs(Players:GetPlayers()) do
+		if player ~= LocalPlayer and player.Character then
+			local head =
+				player.Character:FindFirstChild("Head")
+
+			local humanoid =
+				player.Character:FindFirstChildOfClass("Humanoid")
+
+			if head and humanoid and humanoid.Health > 0 then
+				if HitboxEnabled then
+					if not HitboxParts[player] then
+						local part = Instance.new("Part")
+
+						part.Name =
+							"Hitbox_" .. player.Name
+
+						part.Shape = Enum.PartType.Ball
+
+						part.Size =
+							Vector3.new(
+								HitboxSize,
+								HitboxSize,
+								HitboxSize
+							)
+
+						part.Transparency = 0.55
+						part.Color =
+							Color3.fromRGB(255, 50, 50)
+
+						part.Material = Enum.Material.Neon
+						part.CanCollide = false
+						part.Anchored = false
+						part.Massless = true
+						part.CastShadow = false
+						part.Parent = player.Character
+
+						local weld = Instance.new("Weld")
+
+						weld.Part0 = head
+						weld.Part1 = part
+						weld.C0 = CFrame.new()
+						weld.Parent = part
+
+						HitboxParts[player] = part
+					else
+						local part = HitboxParts[player]
+
+						if part and part.Parent then
+							part.Size =
+								Vector3.new(
+									HitboxSize,
+									HitboxSize,
+									HitboxSize
+								)
+						end
+					end
+
+					if not OriginalSizes[player] then
+						OriginalSizes[player] = head.Size
+					end
+
+					head.Size =
+						Vector3.new(
+							HitboxSize * 0.9,
+							HitboxSize * 0.9,
+							HitboxSize * 0.9
+						)
+
+					head.Transparency = 0.7
+					head.CanCollide = false
+					head.Massless = true
+				else
+					if HitboxParts[player] then
+						HitboxParts[player]:Destroy()
+						HitboxParts[player] = nil
+					end
+
+					if OriginalSizes[player] then
+						head.Size =
+							OriginalSizes[player]
+
+						head.Transparency = 0
+						head.CanCollide = true
+						head.Massless = false
+
+						OriginalSizes[player] = nil
+					end
+				end
+			else
+				if HitboxParts[player] then
+					HitboxParts[player]:Destroy()
+					HitboxParts[player] = nil
+				end
+			end
+		end
+	end
+end
+
+--// LOOP
+local lastStatsUpdate, frames, currentFPS = 0, 0, 0
+
+RunService.RenderStepped:Connect(function()
+	frames += 1
+
+	local now = tick()
+
+	if now - lastStatsUpdate >= 1 then
+		currentFPS = frames
+		frames = 0
+		lastStatsUpdate = now
+
+		local ping = 0
+
+		pcall(function()
+			ping = math.floor(
+				Stats.Network.ServerStatsItem["Data Ping"]:GetValue()
+			)
+		end)
+
+		fpsText.Text =
+			"FPS: " .. currentFPS
+
+		fpsText.TextColor3 =
+			currentFPS < 30
+			and Color3.fromRGB(255, 0, 0)
+			or Color3.fromRGB(0, 255, 0)
+
+		pingText.Text =
+			"PING: " .. ping .. " ms"
+
+		pingText.TextColor3 =
+			ping >= 250
+			and Color3.fromRGB(255, 0, 0)
+			or Color3.fromRGB(0, 255, 0)
+	end
+
+	statsFrame.Visible = FPSPingEnabled
+
+	fovCircle.Size =
+		UDim2.fromOffset(
+			FOVSize,
+			FOVSize
+		)
+
+	fovCircle.Visible = AimbotFOVEnabled
+
+	Hue = (Hue + 1) % 360
+
+	local baseColor =
+		RainbowEnabled
+		and Color3.fromHSV(Hue / 360, 1, 1)
+		or ESPColor
+
+	for plr, o in pairs(ESP) do
+		local c = plr.Character
+
+		local hrp =
+			c and c:FindFirstChild("HumanoidRootPart")
+
+		local hum =
+			c and c:FindFirstChildOfClass("Humanoid")
+
+		local head =
+			c and c:FindFirstChild("Head")
+
+		local myHRP =
+			LocalPlayer.Character
+			and LocalPlayer.Character:FindFirstChild(
+				"HumanoidRootPart"
+			)
+
+		local inRange, dist = false, 0
+
+		if myHRP and hrp then
+			dist =
+				(myHRP.Position - hrp.Position).Magnitude
+
+			inRange =
+				dist <= ESPRadius
+		end
+
+		if
+			(ESPEnabled
+			or LineEnabled
+			or HealthEnabled
+			or SkeletonEnabled)
+			and hrp
+			and hum
+			and hum.Health > 0
+			and inRange
+		then
+			local col = baseColor
+
+			o.H.Adornee = c
+			o.H.Enabled = ESPEnabled
+			o.H.FillColor = col
+			o.H.OutlineColor = col
+
+			local headWorld =
+				head
+				and (
+					head.Position
+					+ Vector3.new(0, 0.25, 0)
+				)
+				or (
+					hrp.Position
+					+ Vector3.new(0, 3, 0)
+				)
+
+			local feetWorld =
+				hrp.Position
+				- Vector3.new(0, 3, 0)
+
+			local headScreen, headOn =
+				Camera:WorldToViewportPoint(
+					headWorld
+				)
+
+			local feetScreen, feetOn =
+				Camera:WorldToViewportPoint(
+					feetWorld
+				)
+
+			if headOn or feetOn then
+				if headOn and ESPEnabled then
+					o.N.Text = plr.Name
+					o.N.TextColor3 = col
+
+					o.N.Position =
+						UDim2.fromOffset(
+							headScreen.X,
+							headScreen.Y - 6
+						)
+
+					o.N.Visible = true
+				else
+					o.N.Visible = false
+				end
+
+				if LineEnabled and feetOn then
+					local sx =
+						Camera.ViewportSize.X / 2
+
+					local sy =
+						Camera.ViewportSize.Y
+
+					local dx =
+						feetScreen.X - sx
+
+					local dy =
+						feetScreen.Y - sy
+
+					o.L.Size =
+						UDim2.fromOffset(
+							math.max(
+								math.sqrt(
+									dx * dx + dy * dy
+								),
+								1
+							),
+							2
+						)
+
+					o.L.Position =
+						UDim2.fromOffset(
+							(sx + feetScreen.X) / 2,
+							(sy + feetScreen.Y) / 2
+						)
+
+					o.L.Rotation =
+						math.deg(
+							math.atan2(dy, dx)
+						)
+
+					o.L.BackgroundColor3 = col
+					o.L.Visible = true
+				else
+					o.L.Visible = false
+				end
+
+				if HealthEnabled and headOn and feetOn then
+					local hp =
+						math.clamp(
+							hum.Health / hum.MaxHealth,
+							0,
+							1
+						)
+
+					local barH = 65
+
+					o.HB.Size =
+						UDim2.fromOffset(
+							7,
+							barH * hp
+						)
+
+					o.HB.Position =
+						UDim2.fromOffset(
+							headScreen.X - 28,
+							(
+								headScreen.Y
+								+ feetScreen.Y
+							) / 2
+							- barH / 2
+							+ barH * (1 - hp)
+						)
+
+					o.HB.BackgroundColor3 =
+						hp > 0.6
+						and Color3.fromRGB(
+							0,
+							255,
+							0
+						)
+						or hp > 0.3
+						and Color3.fromRGB(
+							255,
+							140,
+							0
+						)
+						or Color3.fromRGB(
+							255,
+							0,
+							0
+						)
+
+					o.HB.Visible = true
+
+					o.HT.Text =
+						math.floor(hp * 100) .. "%"
+
+					o.HT.Position =
+						UDim2.fromOffset(
+							headScreen.X - 24,
+							(
+								headScreen.Y
+								+ feetScreen.Y
+							) / 2
+						)
+
+					o.HT.Visible = true
+				else
+					o.HB.Visible = false
+					o.HT.Visible = false
+				end
+
+				if feetOn then
+					o.D.Text =
+						math.floor(dist)
+						.. " studs"
+
+					o.D.TextColor3 = col
+
+					o.D.Position =
+						UDim2.fromOffset(
+							feetScreen.X,
+							feetScreen.Y + 3
+						)
+
+					o.D.Visible = true
+				else
+					o.D.Visible = false
+				end
+
+				if SkeletonEnabled then
+					local function gp(n)
+						local p = c:FindFirstChild(n)
+
+						if p then
+							local pos, on =
+								Camera:WorldToViewportPoint(
+									p.Position
+								)
+
+							if on then
+								return Vector2.new(
+									pos.X,
+									pos.Y
+								)
+							end
+						end
+					end
+
+					local connections = {
+						{
+							gp("Head"),
+							gp("UpperTorso")
+								or gp("Torso")
+						},
+						{
+							gp("UpperTorso")
+								or gp("Torso"),
+							gp("LeftUpperArm")
+								or gp("Left Arm")
+						},
+						{
+							gp("LeftUpperArm")
+								or gp("Left Arm"),
+							gp("LeftLowerArm")
+								or gp("Left Arm")
+						},
+						{
+							gp("LeftLowerArm")
+								or gp("Left Arm"),
+							gp("LeftHand")
+						},
+						{
+							gp("UpperTorso")
+								or gp("Torso"),
+							gp("RightUpperArm")
+								or gp("Right Arm")
+						},
+						{
+							gp("RightUpperArm")
+								or gp("Right Arm"),
+							gp("RightLowerArm")
+								or gp("Right Arm")
+						},
+						{
+							gp("RightLowerArm")
+								or gp("Right Arm"),
+							gp("RightHand")
+						},
+						{
+							gp("UpperTorso")
+								or gp("Torso"),
+							gp("LowerTorso")
+								or gp("Torso")
+						},
+						{
+							gp("LowerTorso")
+								or gp("Torso"),
+							gp("LeftUpperLeg")
+								or gp("Left Leg")
+						},
+						{
+							gp("LeftUpperLeg")
+								or gp("Left Leg"),
+							gp("LeftLowerLeg")
+								or gp("Left Leg")
+						},
+						{
+							gp("LeftLowerLeg")
+								or gp("Left Leg"),
+							gp("LeftFoot")
+						},
+						{
+							gp("LowerTorso")
+								or gp("Torso"),
+							gp("RightUpperLeg")
+								or gp("Right Leg")
+						},
+						{
+							gp("RightUpperLeg")
+								or gp("Right Leg"),
+							gp("RightLowerLeg")
+								or gp("Right Leg")
+						},
+						{
+							gp("RightLowerLeg")
+								or gp("Right Leg"),
+							gp("RightFoot")
+						},
+					}
+
+					for i = 1, #o.S do
+						local conn = connections[i]
+
+						if
+							conn
+							and conn[1]
+							and conn[2]
+						then
+							drawLine(
+								o.S[i],
+								conn[1],
+								conn[2],
+								col
+							)
+						else
+							o.S[i].Visible = false
+						end
+					end
+				else
+					for _, l in pairs(o.S) do
+						l.Visible = false
+					end
+				end
+			else
+				o.N.Visible = false
+				o.L.Visible = false
+				o.HB.Visible = false
+				o.HT.Visible = false
+				o.D.Visible = false
+
+				for _, l in pairs(o.S) do
+					l.Visible = false
+				end
+			end
+		else
+			o.H.Enabled = false
+			o.N.Visible = false
+			o.L.Visible = false
+			o.HB.Visible = false
+			o.HT.Visible = false
+			o.D.Visible = false
+
+			for _, l in pairs(o.S) do
+				l.Visible = false
+			end
+		end
+	end
+
+	--// AIMBOT
+	if AimbotFOVEnabled then
+		local target = GetClosestHeadInFOV()
+
+		if target then
+			local cam = Camera.CFrame
+
+			local sticky =
+				math.clamp(
+					AimbotSmoothness + 0.35,
+					0.55,
+					0.85
+				)
+
+			Camera.CFrame =
+				cam:Lerp(
+					CFrame.new(
+						cam.Position,
+						target.Position
+					),
+					sticky
+				)
+		else
+			currentTarget = nil
+		end
+	else
+		currentTarget = nil
+	end
+
+	UpdateFly()
+	UpdateHitbox()
+
+	if NoclipEnabled and LocalPlayer.Character then
+		for _, p in pairs(
+			LocalPlayer.Character:GetDescendants()
+		) do
+			if p:IsA("BasePart") then
+				p.CanCollide = false
+			end
+		end
+	end
+
+	--// SPEED + JUMP
+	if
+		LocalPlayer.Character
+		and LocalPlayer.Character:FindFirstChildOfClass(
+			"Humanoid"
+		)
+	then
+		local h =
+			LocalPlayer.Character:FindFirstChildOfClass(
+				"Humanoid"
+			)
+
+		if SpeedEnabled then
+			h.WalkSpeed = WalkSpeedValue
+		else
+			h.WalkSpeed = 16
+		end
+
+		if JumpEnabled then
+			h.JumpPower = JumpPowerValue
+		else
+			h.JumpPower = 50
+		end
+	end
+end)
+
+--// INFINITE JUMP
+UserInputService.JumpRequest:Connect(function()
+	if
+		InfiniteJumpEnabled
+		and LocalPlayer.Character
+		and LocalPlayer.Character:FindFirstChildOfClass(
+			"Humanoid"
+		)
+	then
+		LocalPlayer.Character.Humanoid:ChangeState(
+			Enum.HumanoidStateType.Jumping
+		)
+	end
+end)
+
+print(
+	"Nehemias Hub v2.8 - Aimbot solo cabeza + Dash + Speed/Jump Toggles + Universal"
+)
