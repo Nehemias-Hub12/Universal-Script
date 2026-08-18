@@ -24,6 +24,10 @@ local DashReady = true
 
 local WalkSpeedValue, JumpPowerValue, FlySpeedValue = 16, 50, 60
 local FOVSize, AimbotSmoothness, HitboxSize = 120, 0.38, 5
+
+--// HITBOX TRANSPARENCY
+local HitboxTransparency = 0.55
+
 local ESPColor, Hue, ESPRadius = Color3.fromRGB(0, 170, 255), 0, 1000
 
 local Theme = {
@@ -65,7 +69,7 @@ local GUIThemes = {
 
 --// GUI
 local gui = Instance.new("ScreenGui")
-gui.Name = "NehemiasHub"
+gui.Name = "UniversalScript"
 gui.IgnoreGuiInset = true
 gui.ResetOnSpawn = false
 gui.DisplayOrder = 999999
@@ -98,7 +102,7 @@ local title = Instance.new("TextLabel", header)
 title.Size = UDim2.new(1, -42, 1, 0)
 title.Position = UDim2.fromOffset(12, 0)
 title.BackgroundTransparency = 1
-title.Text = "Nehemias Hub"
+title.Text = "Universal script"
 title.Font = Enum.Font.GothamBold
 title.TextSize = 14
 title.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -108,7 +112,7 @@ local version = Instance.new("TextLabel", header)
 version.Size = UDim2.new(1, -42, 0, 13)
 version.Position = UDim2.new(0, 12, 0, 24)
 version.BackgroundTransparency = 1
-version.Text = "Actualizado • v2.8"
+version.Text = "• v2.8"
 version.Font = Enum.Font.Gotham
 version.TextSize = 10
 version.TextColor3 = Color3.fromRGB(140, 180, 220)
@@ -198,6 +202,7 @@ settingsContent.Visible = false
 
 local sectionLabels, toggleContainers, toggleIcons = {}, {}, {}
 
+--// CREAR SECTION
 local function createSection(parent, text, y)
 	local label = Instance.new("TextLabel", parent)
 	label.Size = UDim2.new(1, 0, 0, 18)
@@ -212,6 +217,7 @@ local function createSection(parent, text, y)
 	return y + 22
 end
 
+--// CREAR TOGGLE
 local function createToggle(parent, icon, text, desc, y, callback)
 	local container = Instance.new("Frame", parent)
 	container.Size = UDim2.new(1, 0, 0, 46)
@@ -264,6 +270,7 @@ local function createToggle(parent, icon, text, desc, y, callback)
 	Instance.new("UICorner", toggleCircle).CornerRadius = UDim.new(1, 0)
 
 	local state = false
+
 	local btn = Instance.new("TextButton", container)
 	btn.Size = UDim2.new(1, 0, 1, 0)
 	btn.BackgroundTransparency = 1
@@ -300,6 +307,7 @@ local function createToggle(parent, icon, text, desc, y, callback)
 	return y + 52
 end
 
+--// CREAR SLIDER
 local function createSlider(parent, text, desc, y, min, max, default, callback)
 	local frame = Instance.new("Frame", parent)
 	frame.Size = UDim2.new(1, 0, 0, 50)
@@ -474,8 +482,8 @@ local dashButton = Instance.new("TextButton", gui)
 dashButton.Name = "DashButton"
 dashButton.Size = UDim2.fromOffset(62, 62)
 
--- Un poco más arriba y a la derecha.
-dashButton.Position = UDim2.new(0, 95, 0.60, 0)
+-- Un poquito más arriba y a la derecha.
+dashButton.Position = UDim2.new(0, 100, 0.57, 0)
 
 dashButton.AnchorPoint = Vector2.new(0.5, 0.5)
 dashButton.BackgroundColor3 = Theme.Container
@@ -625,173 +633,82 @@ local y = 0
 
 y = createSection(featuresContent, "👁  ESP", y)
 
-y = createToggle(
-	featuresContent,
-	"👁",
-	"ESP",
-	"Activar/desactivar el ESP principal",
-	y,
-	function(v)
-		ESPEnabled = v
-	end
-)
+y = createToggle(featuresContent, "👁", "ESP", "Activar/desactivar el ESP principal", y, function(v)
+	ESPEnabled = v
+end)
 
-y = createToggle(
-	featuresContent,
-	"👁",
-	"LINE",
-	"Líneas hacia los jugadores",
-	y,
-	function(v)
-		LineEnabled = v
-	end
-)
+y = createToggle(featuresContent, "👁", "LINE", "Líneas hacia los jugadores", y, function(v)
+	LineEnabled = v
+end)
 
-y = createToggle(
-	featuresContent,
-	"👁",
-	"RAINBOW",
-	"Color arcoíris",
-	y,
-	function(v)
-		RainbowEnabled = v
-	end
-)
+y = createToggle(featuresContent, "👁", "RAINBOW", "Color arcoíris", y, function(v)
+	RainbowEnabled = v
+end)
 
-y = createToggle(
-	featuresContent,
-	"👁",
-	"HEALTH",
-	"Barra de vida",
-	y,
-	function(v)
-		HealthEnabled = v
-	end
-)
+y = createToggle(featuresContent, "👁", "HEALTH", "Barra de vida", y, function(v)
+	HealthEnabled = v
+end)
 
-y = createToggle(
-	featuresContent,
-	"👁",
-	"SKELETON",
-	"Esqueleto",
-	y,
-	function(v)
-		SkeletonEnabled = v
-	end
-)
+y = createToggle(featuresContent, "👁", "SKELETON", "Esqueleto", y, function(v)
+	SkeletonEnabled = v
+end)
 
 y = createSection(featuresContent, "🎯  Hitbox y Aimbot", y + 5)
 
-y = createToggle(
-	featuresContent,
-	"🎯",
-	"HITBOX",
-	"Agrandar hitbox de jugadores",
-	y,
-	function(v)
-		HitboxEnabled = v
-	end
-)
+y = createToggle(featuresContent, "🎯", "HITBOX", "Agrandar hitbox de jugadores", y, function(v)
+	HitboxEnabled = v
+end)
 
-y = createToggle(
-	featuresContent,
-	"🎯",
-	"AIMBOT FOV",
-	"Aimbot con círculo FOV",
-	y,
-	function(v)
-		AimbotFOVEnabled = v
-	end
-)
+y = createToggle(featuresContent, "🎯", "AIMBOT FOV", "Aimbot con círculo FOV", y, function(v)
+	AimbotFOVEnabled = v
+end)
 
 y = createSection(featuresContent, "⚡  Universal", y + 5)
 
-y = createToggle(
-	featuresContent,
-	"⚡",
-	"FLY",
-	"Volar (joystick)",
-	y,
-	function(v)
-		FlyEnabled = v
-	end
-)
+y = createToggle(featuresContent, "⚡", "FLY", "Volar (joystick)", y, function(v)
+	FlyEnabled = v
+end)
 
-y = createToggle(
-	featuresContent,
-	"⚡",
-	"NOCLIP",
-	"Atravesar paredes",
-	y,
-	function(v)
-		NoclipEnabled = v
-	end
-)
+y = createToggle(featuresContent, "⚡", "NOCLIP", "Atravesar paredes", y, function(v)
+	NoclipEnabled = v
+end)
 
-y = createToggle(
-	featuresContent,
-	"⚡",
-	"INF JUMP",
-	"Salto infinito",
-	y,
-	function(v)
-		InfiniteJumpEnabled = v
-	end
-)
+y = createToggle(featuresContent, "⚡", "INF JUMP", "Salto infinito", y, function(v)
+	InfiniteJumpEnabled = v
+end)
 
--- SPEED ON/OFF
-y = createToggle(
-	featuresContent,
-	"⚡",
-	"SPEED",
-	"Activar/desactivar Speed",
-	y,
-	function(v)
-		SpeedEnabled = v
-	end
-)
+--// SPEED ON/OFF
+y = createToggle(featuresContent, "⚡", "SPEED", "Activar/desactivar Speed", y, function(v)
+	SpeedEnabled = v
+end)
 
--- JUMP ON/OFF
-y = createToggle(
-	featuresContent,
-	"⚡",
-	"JUMP",
-	"Activar/desactivar Jump Power",
-	y,
-	function(v)
-		JumpEnabled = v
-	end
-)
+--// JUMP ON/OFF
+y = createToggle(featuresContent, "⚡", "JUMP", "Activar/desactivar Jump Power", y, function(v)
+	JumpEnabled = v
+end)
 
--- DASH
-y = createToggle(
-	featuresContent,
-	"➤",
-	"DASH",
-	"Dash hacia delante con cooldown",
-	y,
-	function(v)
-		DashEnabled = v
-		dashButton.Visible = v
-	end
-)
+--// DASH
+y = createToggle(featuresContent, "➤", "DASH", "Dash hacia delante con cooldown", y, function(v)
+	DashEnabled = v
+	dashButton.Visible = v
 
-y = createToggle(
-	featuresContent,
-	"⚡",
-	"FPS + PING",
-	"Mostrar FPS y Ping",
-	y,
-	function(v)
-		FPSPingEnabled = v
+	if not v then
+		dashCooldownText.Text = ""
+		dashButton.BackgroundColor3 = Theme.Container
+		DashReady = true
 	end
-)
+end)
+
+y = createToggle(featuresContent, "⚡", "FPS + PING", "Mostrar FPS y Ping", y, function(v)
+	FPSPingEnabled = v
+end)
 
 featuresContent.CanvasSize = UDim2.fromOffset(0, y + 15)
 
 -- ==================== SETTINGS ====================
 local sy = 0
 
+--// FOV CIRCLE SIZE - PRIMERO
 sy = createSlider(
 	settingsContent,
 	"FOV Circle Size",
@@ -805,45 +722,7 @@ sy = createSlider(
 	end
 )
 
-sy = createSlider(
-	settingsContent,
-	"Hitbox Expander",
-	"Tamaño de la Hitbox",
-	sy,
-	1,
-	25,
-	5,
-	function(v)
-		HitboxSize = v
-	end
-)
-
-sy = createSlider(
-	settingsContent,
-	"Speed",
-	"Velocidad de caminar",
-	sy,
-	16,
-	200,
-	16,
-	function(v)
-		WalkSpeedValue = v
-	end
-)
-
-sy = createSlider(
-	settingsContent,
-	"Jump Power",
-	"Fuerza de salto",
-	sy,
-	50,
-	300,
-	50,
-	function(v)
-		JumpPowerValue = v
-	end
-)
-
+--// AIMBOT SMOOTHNESS - SEGUNDO
 sy = createSlider(
 	settingsContent,
 	"Aimbot Smoothness",
@@ -857,7 +736,49 @@ sy = createSlider(
 	end
 )
 
--- DASH POWER
+--// HITBOX EXPANDER - TERCERO
+sy = createSlider(
+	settingsContent,
+	"Hitbox Expander",
+	"Tamaño de la Hitbox",
+	sy,
+	1,
+	25,
+	5,
+	function(v)
+		HitboxSize = v
+	end
+)
+
+--// HITBOX TRANSPARENCY - CUARTO
+sy = createSlider(
+	settingsContent,
+	"Hitbox Transparency",
+	"Transparencia de la Hitbox",
+	sy,
+	0,
+	100,
+	55,
+	function(v)
+		HitboxTransparency = v / 100
+	end
+)
+
+--// SPEED - UNIVERSAL
+sy = createSlider(
+	settingsContent,
+	"Speed",
+	"Velocidad de caminar",
+	sy,
+	16,
+	200,
+	16,
+	function(v)
+		WalkSpeedValue = v
+	end
+)
+
+--// DASH POWER - UNIVERSAL
 sy = createSlider(
 	settingsContent,
 	"Dash Power",
@@ -871,7 +792,21 @@ sy = createSlider(
 	end
 )
 
--- ESP Colors
+--// JUMP POWER - UNIVERSAL
+sy = createSlider(
+	settingsContent,
+	"Jump Power",
+	"Fuerza de salto",
+	sy,
+	50,
+	300,
+	50,
+	function(v)
+		JumpPowerValue = v
+	end
+)
+
+--// ESP COLORS
 local colorFrame = Instance.new("Frame", settingsContent)
 colorFrame.Size = UDim2.new(1, 0, 0, 50)
 colorFrame.Position = UDim2.fromOffset(0, sy + 6)
@@ -923,7 +858,7 @@ for i, data in ipairs(Colors) do
 	end)
 end
 
--- GUI Colors
+--// GUI COLORS
 local guiColorFrame = Instance.new("Frame", settingsContent)
 guiColorFrame.Size = UDim2.new(1, 0, 0, 50)
 guiColorFrame.Position = UDim2.fromOffset(0, sy + 62)
@@ -1000,6 +935,11 @@ settingsTab.MouseButton1Click:Connect(function()
 end)
 
 --// DASH SYSTEM
+-- Al pulsar Dash:
+-- 1. Hace un salto normal hacia arriba.
+-- 2. Aplica el impulso hacia delante.
+-- 3. Conserva la potencia horizontal del Dash.
+-- 4. El salto evita que el suelo frene inmediatamente el desplazamiento.
 local function DoDash()
 	if not DashEnabled then
 		return
@@ -1039,15 +979,22 @@ local function DoDash()
 
 	direction = direction.Unit
 
+	--// SALTO NORMAL + DASH
+	-- Se conserva la potencia vertical normal del salto.
+	-- El movimiento horizontal usa directamente DashPowerValue.
+	humanoid.Jump = true
+
 	local currentVelocity = root.AssemblyLinearVelocity
 
 	root.AssemblyLinearVelocity = Vector3.new(
 		direction.X * DashPowerValue,
-		currentVelocity.Y,
+		math.max(currentVelocity.Y, JumpPowerValue),
 		direction.Z * DashPowerValue
 	)
 
+	--// ANIMACIÓN DEL ICONO
 	local originalSize = dashIcon.Size
+	local originalPosition = dashIcon.Position
 
 	local dashTween1 = TweenService:Create(
 		dashIcon,
@@ -1070,7 +1017,7 @@ local function DoDash()
 			Enum.EasingDirection.Out
 		),
 		{
-			Position = UDim2.new(0.5, 0, 0.5, 0),
+			Position = originalPosition,
 			Size = originalSize
 		}
 	)
@@ -1083,8 +1030,12 @@ local function DoDash()
 		end
 	end)
 
+	--// COOLDOWN
 	task.spawn(function()
 		local startTime = tick()
+
+		-- Botón oscuro mientras está en cooldown.
+		dashButton.BackgroundColor3 = Color3.fromRGB(18, 24, 34)
 
 		while tick() - startTime < DashCooldown do
 			if not dashButton.Parent then
@@ -1109,6 +1060,9 @@ local function DoDash()
 		dashCooldownText.Text = ""
 		dashCooldownText.TextColor3 =
 			Color3.fromRGB(255, 255, 255)
+
+		--// VUELVE A SU ASPECTO NORMAL
+		dashButton.BackgroundColor3 = Theme.Container
 
 		DashReady = true
 	end)
@@ -1414,6 +1368,7 @@ local function UpdateFly()
 end
 
 --// HITBOX REAL + VISIBLE
+-- La Hitbox ahora es una caja/cuadrado, no una cabeza grande.
 local function UpdateHitbox()
 	for _, player in pairs(Players:GetPlayers()) do
 		if player ~= LocalPlayer and player.Character then
@@ -1431,7 +1386,8 @@ local function UpdateHitbox()
 						part.Name =
 							"Hitbox_" .. player.Name
 
-						part.Shape = Enum.PartType.Ball
+						--// HITBOX CUADRADA
+						part.Shape = Enum.PartType.Block
 
 						part.Size =
 							Vector3.new(
@@ -1440,12 +1396,14 @@ local function UpdateHitbox()
 								HitboxSize
 							)
 
-						part.Transparency = 0.55
+						part.Transparency = HitboxTransparency
 						part.Color =
 							Color3.fromRGB(255, 50, 50)
 
 						part.Material = Enum.Material.Neon
 						part.CanCollide = false
+						part.CanTouch = false
+						part.CanQuery = true
 						part.Anchored = false
 						part.Massless = true
 						part.CastShadow = false
@@ -1469,9 +1427,13 @@ local function UpdateHitbox()
 									HitboxSize,
 									HitboxSize
 								)
+
+							part.Transparency =
+								HitboxTransparency
 						end
 					end
 
+					--// HITBOX REAL
 					if not OriginalSizes[player] then
 						OriginalSizes[player] = head.Size
 					end
@@ -1483,7 +1445,7 @@ local function UpdateHitbox()
 							HitboxSize * 0.9
 						)
 
-					head.Transparency = 0.7
+					head.Transparency = 1
 					head.CanCollide = false
 					head.Massless = true
 				else
@@ -2012,5 +1974,5 @@ UserInputService.JumpRequest:Connect(function()
 end)
 
 print(
-	"Nehemias Hub v2.8 - Aimbot solo cabeza + Dash + Speed/Jump Toggles + Universal"
+	"Universal script v2.8 - Aimbot + ESP + Hitbox + Dash + Speed/Jump + Universal"
 )
