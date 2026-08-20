@@ -1251,7 +1251,7 @@ local function DoDash()
 
 	dashVelocity.Velocity = Vector3.new(
 		direction.X * DashPowerValue,
-		humanoid.JumpPower,
+		22, -- altura baja del Dash
 		direction.Z * DashPowerValue
 	)
 
@@ -2364,31 +2364,16 @@ RunService.RenderStepped:Connect(function()
 		end
 	end
 
-	--// SPEED + JUMP
-	if LocalPlayer.Character
-		and LocalPlayer.Character:
-			FindFirstChildOfClass(
-				"Humanoid"
-			) then
-
-		local h =
-			LocalPlayer.Character:
-			FindFirstChildOfClass(
-				"Humanoid"
-			)
-
-		if SpeedEnabled then
-			h.WalkSpeed =
-				WalkSpeedValue
-		else
-			h.WalkSpeed = 16
-		end
-
-		if JumpEnabled then
-			h.JumpPower =
-				JumpPowerValue
-		else
-			h.JumpPower = 50
+	--// SPEED + JUMP (solo cuando están activados)
+	if LocalPlayer.Character then
+		local h = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+		if h then
+			if SpeedEnabled then
+				h.WalkSpeed = WalkSpeedValue
+			end
+			if JumpEnabled then
+				h.JumpPower = JumpPowerValue
+			end
 		end
 	end
 end)
