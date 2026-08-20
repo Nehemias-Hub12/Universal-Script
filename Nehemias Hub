@@ -4,6 +4,7 @@ local RunService = game:GetService("RunService")
 local Stats = game:GetService("Stats")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
+local HttpService = game:GetService("HttpService")
 local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
 
@@ -32,6 +33,8 @@ local FOVSize, AimbotSmoothness, HitboxSize = 120, 0.38, 5
 local HitboxTransparency = 0.55
 local ESPColor, Hue, ESPRadius = Color3.fromRGB(0, 170, 255), 0, 1000
 
+local CurrentThemeName = "Azul Marino"
+
 local Theme = {
 	Main = Color3.fromRGB(12, 18, 28),
 	Header = Color3.fromRGB(16, 24, 38),
@@ -52,7 +55,6 @@ local toggleIcons = {}
 
 local currentTarget = nil
 
--- Referencias de los selectores (para el tema)
 local targetContainer, targetTitle, targetValue, targetArrow, targetList
 local playerContainer, playerTitle, playerValue, playerArrow, playerList
 
@@ -206,7 +208,7 @@ settingsContent.BackgroundTransparency = 1
 settingsContent.BorderSizePixel = 0
 settingsContent.ScrollBarThickness = 3
 settingsContent.ScrollBarImageColor3 = Theme.Stroke
-settingsContent.CanvasSize = UDim2.fromOffset(0, 580)
+settingsContent.CanvasSize = UDim2.fromOffset(0, 780)
 settingsContent.Visible = false
 
 local function createSection(parent, text, y)
@@ -283,13 +285,9 @@ local function createToggle(parent, icon, text, desc, y, callback)
 	local toggleData = {
 		bg = toggleBg,
 		circle = toggleCircle,
-		isOn = function()
-			return state
-		end,
-
+		isOn = function() return state end,
 		setOn = function(v)
 			state = v
-
 			if state then
 				toggleBg.BackgroundColor3 = Theme.Accent
 				toggleCircle.Position = UDim2.fromOffset(21, 3)
@@ -360,52 +358,40 @@ local function createSlider(parent, text, desc, y, min, max, default, callback)
 
 	table.insert(sliderFills, {
 		Fill = barFill,
-		ValueLabel = valueLabel
+		ValueLabel = valueLabel,
+		Min = min,
+		Max = max
 	})
 
 	local dragging = false
-
 	local button = Instance.new("TextButton", barBg)
 	button.Size = UDim2.new(1, 0, 1, 0)
 	button.BackgroundTransparency = 1
 	button.Text = ""
 
 	local function update(input)
-		local pos = math.clamp(
-			(input.Position.X - barBg.AbsolutePosition.X) / barBg.AbsoluteSize.X,
-			0,
-			1
-		)
-
+		local pos = math.clamp((input.Position.X - barBg.AbsolutePosition.X) / barBg.AbsoluteSize.X, 0, 1)
 		local value = math.floor(min + (max - min) * pos)
-
 		barFill.Size = UDim2.new(pos, 0, 1, 0)
 		valueLabel.Text = tostring(value)
-
 		callback(value)
 	end
 
 	button.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1
-			or input.UserInputType == Enum.UserInputType.Touch then
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
 			dragging = true
 			update(input)
 		end
 	end)
 
 	button.InputEnded:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1
-			or input.UserInputType == Enum.UserInputType.Touch then
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
 			dragging = false
 		end
 	end)
 
 	UserInputService.InputChanged:Connect(function(input)
-		if dragging
-			and (
-				input.UserInputType == Enum.UserInputType.MouseMovement
-				or input.UserInputType == Enum.UserInputType.Touch
-			) then
+		if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
 			update(input)
 		end
 	end)
@@ -421,7 +407,6 @@ fovCircle.Size = UDim2.fromOffset(FOVSize, FOVSize)
 fovCircle.BackgroundTransparency = 1
 fovCircle.Visible = false
 fovCircle.ZIndex = 50
-
 Instance.new("UICorner", fovCircle).CornerRadius = UDim.new(1, 0)
 
 local fovStroke = Instance.new("UIStroke", fovCircle)
@@ -438,7 +423,6 @@ statsFrame.BackgroundTransparency = 0.05
 statsFrame.BorderSizePixel = 0
 statsFrame.Visible = false
 statsFrame.ZIndex = 2000
-
 Instance.new("UICorner", statsFrame).CornerRadius = UDim.new(0, 7)
 
 local statsStroke = Instance.new("UIStroke", statsFrame)
@@ -491,10 +475,7 @@ dashButton.AutoButtonColor = false
 dashButton.Visible = false
 dashButton.ZIndex = 3000
 dashButton.Active = true
-
-local dashCorner = Instance.new("UICorner")
-dashCorner.CornerRadius = UDim.new(1, 0)
-dashCorner.Parent = dashButton
+Instance.new("UICorner", dashButton).CornerRadius = UDim.new(1, 0)
 
 local dashImage = Instance.new("ImageLabel")
 dashImage.Name = "DashImage"
@@ -507,10 +488,7 @@ dashImage.Image = DASH_IMAGE_ID
 dashImage.ImageTransparency = 0
 dashImage.ScaleType = Enum.ScaleType.Stretch
 dashImage.ZIndex = 3001
-
-local imageCorner = Instance.new("UICorner")
-imageCorner.CornerRadius = UDim.new(1, 0)
-imageCorner.Parent = dashImage
+Instance.new("UICorner", dashImage).CornerRadius = UDim.new(1, 0)
 
 local dashCooldownText = Instance.new("TextLabel", dashButton)
 dashCooldownText.Size = UDim2.fromScale(1, 1)
@@ -560,7 +538,6 @@ local function ApplyTheme(newTheme)
 		if data.Fill and data.Fill.Parent then
 			data.Fill.BackgroundColor3 = Theme.Accent
 		end
-
 		if data.ValueLabel and data.ValueLabel.Parent then
 			data.ValueLabel.TextColor3 = Theme.TextAccent
 		end
@@ -568,31 +545,21 @@ local function ApplyTheme(newTheme)
 
 	fovStroke.Color = Theme.Stroke
 
-	-- Selectores (AIMBOT TARGET y AIMBOT PLAYER)
-	if targetContainer then
-		targetContainer.BackgroundColor3 = Theme.Container
-	end
-	if targetTitle then
-		targetTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-	end
-	if targetValue then
-		targetValue.TextColor3 = Theme.TextAccent
-	end
-	if targetArrow then
-		targetArrow.TextColor3 = Theme.TextAccent
-	end
+	if targetContainer then targetContainer.BackgroundColor3 = Theme.Container end
+	if targetTitle then targetTitle.TextColor3 = Color3.fromRGB(255, 255, 255) end
+	if targetValue then targetValue.TextColor3 = Theme.TextAccent end
+	if targetArrow then targetArrow.TextColor3 = Theme.TextAccent end
 
-	if playerContainer then
-		playerContainer.BackgroundColor3 = Theme.Container
-	end
-	if playerTitle then
-		playerTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-	end
-	if playerValue then
-		playerValue.TextColor3 = Theme.TextAccent
-	end
-	if playerArrow then
-		playerArrow.TextColor3 = Theme.TextAccent
+	if playerContainer then playerContainer.BackgroundColor3 = Theme.Container end
+	if playerTitle then playerTitle.TextColor3 = Color3.fromRGB(255, 255, 255) end
+	if playerValue then playerValue.TextColor3 = Theme.TextAccent end
+	if playerArrow then playerArrow.TextColor3 = Theme.TextAccent end
+
+	-- Actualizar color de los switches de los toggles
+	for _, data in pairs(activeToggles) do
+		if data and data.setOn and data.isOn then
+			data.setOn(data.isOn())
+		end
 	end
 end
 
@@ -601,58 +568,18 @@ local y = 0
 
 y = createSection(featuresContent, "👁  ESP", y)
 
-y = createToggle(featuresContent, "👁", "ESP",
-	"Activar/desactivar el ESP principal", y,
-	function(v)
-		ESPEnabled = v
-	end
-)
-
-y = createToggle(featuresContent, "👁", "LINE",
-	"Líneas hacia los jugadores", y,
-	function(v)
-		LineEnabled = v
-	end
-)
-
-y = createToggle(featuresContent, "👁", "RAINBOW",
-	"Color arcoíris", y,
-	function(v)
-		RainbowEnabled = v
-	end
-)
-
-y = createToggle(featuresContent, "👁", "HEALTH",
-	"Barra de vida", y,
-	function(v)
-		HealthEnabled = v
-	end
-)
-
-y = createToggle(featuresContent, "👁", "SKELETON",
-	"Esqueleto", y,
-	function(v)
-		SkeletonEnabled = v
-	end
-)
+y = createToggle(featuresContent, "👁", "ESP", "Activar/desactivar el ESP principal", y, function(v) ESPEnabled = v end)
+y = createToggle(featuresContent, "👁", "LINE", "Líneas hacia los jugadores", y, function(v) LineEnabled = v end)
+y = createToggle(featuresContent, "👁", "RAINBOW", "Color arcoíris", y, function(v) RainbowEnabled = v end)
+y = createToggle(featuresContent, "👁", "HEALTH", "Barra de vida", y, function(v) HealthEnabled = v end)
+y = createToggle(featuresContent, "👁", "SKELETON", "Esqueleto", y, function(v) SkeletonEnabled = v end)
 
 y = createSection(featuresContent, "🎯  Hitbox y Aimbot", y + 5)
 
-y = createToggle(featuresContent, "🎯", "HITBOX",
-	"Agrandar hitbox de jugadores", y,
-	function(v)
-		HitboxEnabled = v
-	end
-)
+y = createToggle(featuresContent, "🎯", "HITBOX", "Agrandar hitbox de jugadores", y, function(v) HitboxEnabled = v end)
+y = createToggle(featuresContent, "🎯", "AIMBOT FOV", "Aimbot con círculo FOV", y, function(v) AimbotFOVEnabled = v end)
 
-y = createToggle(featuresContent, "🎯", "AIMBOT FOV",
-	"Aimbot con círculo FOV", y,
-	function(v)
-		AimbotFOVEnabled = v
-	end
-)
-
---// AIMBOT TARGET
+-- AIMBOT TARGET
 targetContainer = Instance.new("Frame", featuresContent)
 targetContainer.Size = UDim2.new(1, 0, 0, 46)
 targetContainer.Position = UDim2.fromOffset(0, y)
@@ -697,7 +624,6 @@ targetList.BorderSizePixel = 0
 targetList.Visible = false
 targetList.ClipsDescendants = true
 targetList.ZIndex = 200
-
 Instance.new("UICorner", targetList).CornerRadius = UDim.new(0, 8)
 
 local targetLayout = Instance.new("UIListLayout", targetList)
@@ -713,14 +639,10 @@ local function CloseTargetList()
 end
 
 local function OpenTargetList()
-	if playerOpen then
-		ClosePlayerList()
-	end
-
+	if playerOpen then ClosePlayerList() end
 	local absPos = targetContainer.AbsolutePosition
 	local mainAbs = main.AbsolutePosition
 	local width = targetContainer.AbsoluteSize.X
-
 	targetList.Parent = main
 	targetList.Position = UDim2.fromOffset(absPos.X - mainAbs.X, absPos.Y - mainAbs.Y + 46)
 	targetList.Size = UDim2.fromOffset(width, 92)
@@ -731,11 +653,8 @@ end
 
 local function RefreshTargetList()
 	for _, child in pairs(targetList:GetChildren()) do
-		if child:IsA("TextButton") then
-			child:Destroy()
-		end
+		if child:IsA("TextButton") then child:Destroy() end
 	end
-
 	for _, option in ipairs({"Head", "Torso", "Pies"}) do
 		local button = Instance.new("TextButton")
 		button.Size = UDim2.new(1, -6, 0, 28)
@@ -746,9 +665,7 @@ local function RefreshTargetList()
 		button.TextColor3 = Color3.fromRGB(255, 255, 255)
 		button.Parent = targetList
 		button.ZIndex = 201
-
 		Instance.new("UICorner", button).CornerRadius = UDim.new(0, 5)
-
 		button.MouseButton1Click:Connect(function()
 			AimbotTargetMode = option
 			targetValue.Text = option
@@ -758,19 +675,13 @@ local function RefreshTargetList()
 end
 
 targetArrow.MouseButton1Click:Connect(function()
-	if targetOpen then
-		CloseTargetList()
-	else
-		RefreshTargetList()
-		OpenTargetList()
-	end
+	if targetOpen then CloseTargetList() else RefreshTargetList() OpenTargetList() end
 end)
 
 RefreshTargetList()
-
 y += 52
 
---// AIMBOT PLAYER
+-- AIMBOT PLAYER
 playerContainer = Instance.new("Frame", featuresContent)
 playerContainer.Size = UDim2.new(1, 0, 0, 46)
 playerContainer.Position = UDim2.fromOffset(0, y)
@@ -817,7 +728,6 @@ playerList.ClipsDescendants = true
 playerList.ScrollBarThickness = 2
 playerList.CanvasSize = UDim2.fromOffset(0, 0)
 playerList.ZIndex = 200
-
 Instance.new("UICorner", playerList).CornerRadius = UDim.new(0, 8)
 
 local playerLayout = Instance.new("UIListLayout", playerList)
@@ -833,22 +743,15 @@ local function ClosePlayerList()
 end
 
 local function OpenPlayerList()
-	if targetOpen then
-		CloseTargetList()
-	end
-
+	if targetOpen then CloseTargetList() end
 	local absPos = playerContainer.AbsolutePosition
 	local mainAbs = main.AbsolutePosition
 	local width = playerContainer.AbsoluteSize.X
-
 	local count = 0
 	for _, player in pairs(Players:GetPlayers()) do
-		if player ~= LocalPlayer then
-			count += 1
-		end
+		if player ~= LocalPlayer then count += 1 end
 	end
 	local height = math.clamp((count + 1) * 30, 30, 150)
-
 	playerList.Parent = main
 	playerList.Position = UDim2.fromOffset(absPos.X - mainAbs.X, absPos.Y - mainAbs.Y + 46)
 	playerList.Size = UDim2.fromOffset(width, height)
@@ -859,11 +762,8 @@ end
 
 local function RefreshPlayerList()
 	for _, child in pairs(playerList:GetChildren()) do
-		if child:IsA("TextButton") then
-			child:Destroy()
-		end
+		if child:IsA("TextButton") then child:Destroy() end
 	end
-
 	local allButton = Instance.new("TextButton")
 	allButton.Size = UDim2.new(1, -6, 0, 28)
 	allButton.BackgroundColor3 = Theme.Header
@@ -873,15 +773,12 @@ local function RefreshPlayerList()
 	allButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 	allButton.Parent = playerList
 	allButton.ZIndex = 201
-
 	Instance.new("UICorner", allButton).CornerRadius = UDim.new(0, 5)
-
 	allButton.MouseButton1Click:Connect(function()
 		AimbotPlayerTarget = nil
 		playerValue.Text = "Todos"
 		ClosePlayerList()
 	end)
-
 	for _, player in pairs(Players:GetPlayers()) do
 		if player ~= LocalPlayer then
 			local button = Instance.new("TextButton")
@@ -893,9 +790,7 @@ local function RefreshPlayerList()
 			button.TextColor3 = Color3.fromRGB(255, 255, 255)
 			button.Parent = playerList
 			button.ZIndex = 201
-
 			Instance.new("UICorner", button).CornerRadius = UDim.new(0, 5)
-
 			button.MouseButton1Click:Connect(function()
 				AimbotPlayerTarget = player.Name
 				playerValue.Text = player.Name
@@ -903,26 +798,17 @@ local function RefreshPlayerList()
 			end)
 		end
 	end
-
 	task.defer(function()
 		playerList.CanvasSize = UDim2.fromOffset(0, playerLayout.AbsoluteContentSize.Y + 5)
 	end)
 end
 
 playerArrow.MouseButton1Click:Connect(function()
-	if playerOpen then
-		ClosePlayerList()
-	else
-		RefreshPlayerList()
-		OpenPlayerList()
-	end
+	if playerOpen then ClosePlayerList() else RefreshPlayerList() OpenPlayerList() end
 end)
 
 Players.PlayerAdded:Connect(function()
-	if playerOpen then
-		RefreshPlayerList()
-		OpenPlayerList()
-	end
+	if playerOpen then RefreshPlayerList() OpenPlayerList() end
 end)
 
 Players.PlayerRemoving:Connect(function(player)
@@ -930,13 +816,9 @@ Players.PlayerRemoving:Connect(function(player)
 		AimbotPlayerTarget = nil
 		playerValue.Text = "Todos"
 	end
-	if playerOpen then
-		RefreshPlayerList()
-		OpenPlayerList()
-	end
+	if playerOpen then RefreshPlayerList() OpenPlayerList() end
 end)
 
--- Cerrar listas al scrollear
 featuresContent:GetPropertyChangedSignal("CanvasPosition"):Connect(function()
 	if targetOpen then CloseTargetList() end
 	if playerOpen then ClosePlayerList() end
@@ -944,132 +826,32 @@ end)
 
 y += 52
 
---// VISIBLE CHECK
-y = createToggle(
-	featuresContent,
-	"👁",
-	"VISIBLE CHECK",
-	"El Aimbot ignora jugadores detrás de paredes",
-	y,
-	function(v)
-		VisibleCheckEnabled = v
-	end
-)
+y = createToggle(featuresContent, "👁", "VISIBLE CHECK", "El Aimbot ignora jugadores detrás de paredes", y, function(v) VisibleCheckEnabled = v end)
 
 y = createSection(featuresContent, "⚡  Universal", y + 5)
 
-y = createToggle(featuresContent, "⚡", "FLY",
-	"Volar (joystick)", y,
-	function(v)
-		FlyEnabled = v
-	end
-)
-
-y = createToggle(featuresContent, "⚡", "NOCLIP",
-	"Atravesar paredes", y,
-	function(v)
-		NoclipEnabled = v
-	end
-)
-
-y = createToggle(featuresContent, "⚡", "INF JUMP",
-	"Salto infinito", y,
-	function(v)
-		InfiniteJumpEnabled = v
-	end
-)
-
-y = createToggle(featuresContent, "⚡", "SPEED",
-	"Activar/desactivar Speed", y,
-	function(v)
-		SpeedEnabled = v
-	end
-)
-
-y = createToggle(featuresContent, "⚡", "JUMP",
-	"Activar/desactivar Jump Power", y,
-	function(v)
-		JumpEnabled = v
-	end
-)
-
-y = createToggle(featuresContent, "➤", "DASH",
-	"Dash hacia delante con cooldown", y,
-	function(v)
-		DashEnabled = v
-		dashButton.Visible = v
-	end
-)
-
-y = createToggle(featuresContent, "⚡", "FPS + PING",
-	"Mostrar FPS y Ping", y,
-	function(v)
-		FPSPingEnabled = v
-	end
-)
+y = createToggle(featuresContent, "⚡", "FLY", "Volar (joystick)", y, function(v) FlyEnabled = v end)
+y = createToggle(featuresContent, "⚡", "NOCLIP", "Atravesar paredes", y, function(v) NoclipEnabled = v end)
+y = createToggle(featuresContent, "⚡", "INF JUMP", "Salto infinito", y, function(v) InfiniteJumpEnabled = v end)
+y = createToggle(featuresContent, "⚡", "SPEED", "Activar/desactivar Speed", y, function(v) SpeedEnabled = v end)
+y = createToggle(featuresContent, "⚡", "JUMP", "Activar/desactivar Jump Power", y, function(v) JumpEnabled = v end)
+y = createToggle(featuresContent, "➤", "DASH", "Dash hacia delante con cooldown", y, function(v) DashEnabled = v dashButton.Visible = v end)
+y = createToggle(featuresContent, "⚡", "FPS + PING", "Mostrar FPS y Ping", y, function(v) FPSPingEnabled = v end)
 
 featuresContent.CanvasSize = UDim2.fromOffset(0, y + 15)
 
 --// SETTINGS
 local sy = 0
 
-sy = createSlider(settingsContent, "FOV Circle Size",
-	"Tamaño del círculo Aimbot", sy,
-	40, 350, 120,
-	function(v)
-		FOVSize = v
-	end
-)
+sy = createSlider(settingsContent, "FOV Circle Size", "Tamaño del círculo Aimbot", sy, 40, 350, 120, function(v) FOVSize = v end)
+sy = createSlider(settingsContent, "Aimbot Smoothness", "Más alto = más pegajoso", sy, 10, 60, 38, function(v) AimbotSmoothness = v / 100 end)
+sy = createSlider(settingsContent, "Hitbox Expander", "Tamaño de la Hitbox", sy, 1, 25, 5, function(v) HitboxSize = v end)
+sy = createSlider(settingsContent, "Hitbox Transparency", "Transparencia de la caja Hitbox", sy, 0, 100, 55, function(v) HitboxTransparency = v / 100 end)
+sy = createSlider(settingsContent, "Speed", "Velocidad de caminar", sy, 16, 200, 16, function(v) WalkSpeedValue = v end)
+sy = createSlider(settingsContent, "Dash Power", "Potencia del Dash hacia delante", sy, 60, 250, 120, function(v) DashPowerValue = v end)
+sy = createSlider(settingsContent, "Jump Power", "Fuerza de salto", sy, 50, 300, 50, function(v) JumpPowerValue = v end)
 
-sy = createSlider(settingsContent, "Aimbot Smoothness",
-	"Más alto = más pegajoso", sy,
-	10, 60, 38,
-	function(v)
-		AimbotSmoothness = v / 100
-	end
-)
-
-sy = createSlider(settingsContent, "Hitbox Expander",
-	"Tamaño de la Hitbox", sy,
-	1, 25, 5,
-	function(v)
-		HitboxSize = v
-	end
-)
-
-sy = createSlider(settingsContent, "Hitbox Transparency",
-	"Transparencia de la caja Hitbox", sy,
-	0, 100, 55,
-	function(v)
-		HitboxTransparency = v / 100
-	end
-)
-
-sy = createSlider(settingsContent, "Speed",
-	"Velocidad de caminar", sy,
-	16, 200, 16,
-	function(v)
-		WalkSpeedValue = v
-	end
-)
-
-sy = createSlider(settingsContent, "Dash Power",
-	"Potencia del Dash hacia delante", sy,
-	60, 250, 120,
-	function(v)
-		DashPowerValue = v
-	end
-)
-
-sy = createSlider(settingsContent, "Jump Power",
-	"Fuerza de salto", sy,
-	50, 300, 50,
-	function(v)
-		JumpPowerValue = v
-	end
-)
-
---// ESP COLORS
+-- ESP COLORS
 local colorFrame = Instance.new("Frame", settingsContent)
 colorFrame.Size = UDim2.new(1, 0, 0, 50)
 colorFrame.Position = UDim2.fromOffset(0, sy + 6)
@@ -1091,37 +873,28 @@ colorContainer.BackgroundTransparency = 1
 
 for i, data in ipairs(Colors) do
 	local btn = Instance.new("TextButton", colorContainer)
-
 	btn.Size = UDim2.fromOffset(24, 24)
 	btn.Position = UDim2.fromOffset((i - 1) * 30, 1)
 	btn.BackgroundColor3 = data.Color
 	btn.Text = ""
-
-	Instance.new("UICorner", btn).CornerRadius =
-		UDim.new(1, 0)
-
+	Instance.new("UICorner", btn).CornerRadius = UDim.new(1, 0)
 	local stroke = Instance.new("UIStroke", btn)
 	stroke.Color = Color3.fromRGB(255, 255, 255)
 	stroke.Thickness = 0
-
 	btn.MouseButton1Click:Connect(function()
 		ESPColor = data.Color
 		RainbowEnabled = false
-
 		for _, child in pairs(colorContainer:GetChildren()) do
 			if child:IsA("TextButton") then
 				local s = child:FindFirstChildOfClass("UIStroke")
-				if s then
-					s.Thickness = 0
-				end
+				if s then s.Thickness = 0 end
 			end
 		end
-
 		stroke.Thickness = 2
 	end)
 end
 
---// GUI COLORS
+-- GUI COLORS
 local guiColorFrame = Instance.new("Frame", settingsContent)
 guiColorFrame.Size = UDim2.new(1, 0, 0, 50)
 guiColorFrame.Position = UDim2.fromOffset(0, sy + 62)
@@ -1143,45 +916,385 @@ guiColorContainer.BackgroundTransparency = 1
 
 for i, data in ipairs(GUIThemes) do
 	local btn = Instance.new("TextButton", guiColorContainer)
-
 	btn.Size = UDim2.fromOffset(24, 24)
 	btn.Position = UDim2.fromOffset((i - 1) * 30, 1)
 	btn.BackgroundColor3 = data.Accent
 	btn.Text = ""
-
-	Instance.new("UICorner", btn).CornerRadius =
-		UDim.new(1, 0)
-
+	Instance.new("UICorner", btn).CornerRadius = UDim.new(1, 0)
 	local stroke = Instance.new("UIStroke", btn)
 	stroke.Color = Color3.fromRGB(255, 255, 255)
 	stroke.Thickness = 0
-
 	btn.MouseButton1Click:Connect(function()
+		CurrentThemeName = data.Name
 		ApplyTheme(data)
-
 		for _, child in pairs(guiColorContainer:GetChildren()) do
 			if child:IsA("TextButton") then
 				local s = child:FindFirstChildOfClass("UIStroke")
-				if s then
-					s.Thickness = 0
-				end
+				if s then s.Thickness = 0 end
 			end
 		end
-
 		stroke.Thickness = 2
 	end)
 end
 
-settingsContent.CanvasSize = UDim2.fromOffset(0, sy + 145)
+--// ========== CONFIGURACIONES ==========
+local configY = sy + 120
+
+local configSection = Instance.new("TextLabel", settingsContent)
+configSection.Size = UDim2.new(1, 0, 0, 18)
+configSection.Position = UDim2.fromOffset(0, configY)
+configSection.BackgroundTransparency = 1
+configSection.Text = "💾  Guardar configuraciones"
+configSection.Font = Enum.Font.GothamBold
+configSection.TextSize = 11
+configSection.TextColor3 = Theme.TextAccent
+configSection.TextXAlignment = Enum.TextXAlignment.Left
+table.insert(sectionLabels, configSection)
+
+configY += 24
+
+local nameBox = Instance.new("TextBox", settingsContent)
+nameBox.Size = UDim2.new(1, 0, 0, 32)
+nameBox.Position = UDim2.fromOffset(0, configY)
+nameBox.BackgroundColor3 = Theme.Container
+nameBox.Text = ""
+nameBox.PlaceholderText = "Nombre de la configuración"
+nameBox.Font = Enum.Font.Gotham
+nameBox.TextSize = 12
+nameBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+nameBox.PlaceholderColor3 = Color3.fromRGB(140, 160, 180)
+nameBox.ClearTextOnFocus = false
+Instance.new("UICorner", nameBox).CornerRadius = UDim.new(0, 6)
+
+configY += 40
+
+local configSelector = Instance.new("Frame", settingsContent)
+configSelector.Size = UDim2.new(1, 0, 0, 36)
+configSelector.Position = UDim2.fromOffset(0, configY)
+configSelector.BackgroundColor3 = Theme.Container
+configSelector.BorderSizePixel = 0
+Instance.new("UICorner", configSelector).CornerRadius = UDim.new(0, 6)
+
+local configSelectorValue = Instance.new("TextLabel", configSelector)
+configSelectorValue.Size = UDim2.new(1, -40, 1, 0)
+configSelectorValue.Position = UDim2.fromOffset(10, 0)
+configSelectorValue.BackgroundTransparency = 1
+configSelectorValue.Text = "Seleccionar configuración"
+configSelectorValue.Font = Enum.Font.Gotham
+configSelectorValue.TextSize = 12
+configSelectorValue.TextColor3 = Theme.TextAccent
+configSelectorValue.TextXAlignment = Enum.TextXAlignment.Left
+
+local configArrow = Instance.new("TextButton", configSelector)
+configArrow.Size = UDim2.fromOffset(30, 30)
+configArrow.Position = UDim2.new(1, -35, 0.5, -15)
+configArrow.BackgroundTransparency = 1
+configArrow.Text = "⌄"
+configArrow.Font = Enum.Font.GothamBold
+configArrow.TextSize = 18
+configArrow.TextColor3 = Theme.TextAccent
+
+local configList = Instance.new("ScrollingFrame", settingsContent)
+configList.Size = UDim2.new(1, 0, 0, 0)
+configList.Position = UDim2.fromOffset(0, configY + 40)
+configList.BackgroundColor3 = Theme.Container
+configList.BorderSizePixel = 0
+configList.Visible = false
+configList.ClipsDescendants = true
+configList.ScrollBarThickness = 3
+configList.ZIndex = 50
+Instance.new("UICorner", configList).CornerRadius = UDim.new(0, 6)
+
+local configListLayout = Instance.new("UIListLayout", configList)
+configListLayout.Padding = UDim.new(0, 2)
+
+local configListOpen = false
+local selectedConfigName = nil
+
+configY += 48
+
+local saveBtn = Instance.new("TextButton", settingsContent)
+saveBtn.Size = UDim2.new(0.48, 0, 0, 32)
+saveBtn.Position = UDim2.fromOffset(0, configY)
+saveBtn.BackgroundColor3 = Theme.Accent
+saveBtn.Text = "Guardar"
+saveBtn.Font = Enum.Font.GothamBold
+saveBtn.TextSize = 13
+saveBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+Instance.new("UICorner", saveBtn).CornerRadius = UDim.new(0, 6)
+
+local loadBtn = Instance.new("TextButton", settingsContent)
+loadBtn.Size = UDim2.new(0.48, 0, 0, 32)
+loadBtn.Position = UDim2.new(0.52, 0, 0, configY)
+loadBtn.BackgroundColor3 = Color3.fromRGB(40, 120, 70)
+loadBtn.Text = "Cargar"
+loadBtn.Font = Enum.Font.GothamBold
+loadBtn.TextSize = 13
+loadBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+Instance.new("UICorner", loadBtn).CornerRadius = UDim.new(0, 6)
+
+configY += 40
+
+local deleteBtn = Instance.new("TextButton", settingsContent)
+deleteBtn.Size = UDim2.new(1, 0, 0, 32)
+deleteBtn.Position = UDim2.fromOffset(0, configY)
+deleteBtn.BackgroundColor3 = Color3.fromRGB(160, 40, 40)
+deleteBtn.Text = "Eliminar configuración"
+deleteBtn.Font = Enum.Font.GothamBold
+deleteBtn.TextSize = 13
+deleteBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+Instance.new("UICorner", deleteBtn).CornerRadius = UDim.new(0, 6)
+
+settingsContent.CanvasSize = UDim2.fromOffset(0, configY + 50)
+
+--// FUNCIONES CONFIG
+local function EnsureFolder()
+	if isfolder and not isfolder("NehemiasHubConfigs") then
+		makefolder("NehemiasHubConfigs")
+	end
+end
+
+local function GetConfigPath(name)
+	return "NehemiasHubConfigs/" .. name .. ".json"
+end
+
+local function SaveConfig(name)
+	if not name or name == "" then return false end
+	EnsureFolder()
+
+	local data = {
+		ESPEnabled = ESPEnabled,
+		LineEnabled = LineEnabled,
+		RainbowEnabled = RainbowEnabled,
+		HealthEnabled = HealthEnabled,
+		SkeletonEnabled = SkeletonEnabled,
+		HitboxEnabled = HitboxEnabled,
+		AimbotFOVEnabled = AimbotFOVEnabled,
+		VisibleCheckEnabled = VisibleCheckEnabled,
+		FlyEnabled = FlyEnabled,
+		NoclipEnabled = NoclipEnabled,
+		InfiniteJumpEnabled = InfiniteJumpEnabled,
+		SpeedEnabled = SpeedEnabled,
+		JumpEnabled = JumpEnabled,
+		DashEnabled = DashEnabled,
+		FPSPingEnabled = FPSPingEnabled,
+		AimbotTargetMode = AimbotTargetMode,
+		AimbotPlayerTarget = AimbotPlayerTarget,
+		FOVSize = FOVSize,
+		AimbotSmoothness = AimbotSmoothness,
+		HitboxSize = HitboxSize,
+		HitboxTransparency = HitboxTransparency,
+		WalkSpeedValue = WalkSpeedValue,
+		DashPowerValue = DashPowerValue,
+		JumpPowerValue = JumpPowerValue,
+		ESPColor = {R = ESPColor.R, G = ESPColor.G, B = ESPColor.B},
+		ThemeName = CurrentThemeName
+	}
+
+	local success = pcall(function()
+		writefile(GetConfigPath(name), HttpService:JSONEncode(data))
+	end)
+	return success
+end
+
+local function LoadConfig(name)
+	if not name or name == "" then return false end
+
+	local success, content = pcall(function()
+		return readfile(GetConfigPath(name))
+	end)
+	if not success or not content then return false end
+
+	local ok, data = pcall(function()
+		return HttpService:JSONDecode(content)
+	end)
+	if not ok or type(data) ~= "table" then return false end
+
+	ESPEnabled = data.ESPEnabled or false
+	LineEnabled = data.LineEnabled or false
+	RainbowEnabled = data.RainbowEnabled or false
+	HealthEnabled = data.HealthEnabled or false
+	SkeletonEnabled = data.SkeletonEnabled or false
+	HitboxEnabled = data.HitboxEnabled or false
+	AimbotFOVEnabled = data.AimbotFOVEnabled or false
+	VisibleCheckEnabled = data.VisibleCheckEnabled or false
+	FlyEnabled = data.FlyEnabled or false
+	NoclipEnabled = data.NoclipEnabled or false
+	InfiniteJumpEnabled = data.InfiniteJumpEnabled or false
+	SpeedEnabled = data.SpeedEnabled or false
+	JumpEnabled = data.JumpEnabled or false
+	DashEnabled = data.DashEnabled or false
+	FPSPingEnabled = data.FPSPingEnabled or false
+
+	AimbotTargetMode = data.AimbotTargetMode or "Head"
+	AimbotPlayerTarget = data.AimbotPlayerTarget
+
+	FOVSize = data.FOVSize or 120
+	AimbotSmoothness = data.AimbotSmoothness or 0.38
+	HitboxSize = data.HitboxSize or 5
+	HitboxTransparency = data.HitboxTransparency or 0.55
+	WalkSpeedValue = data.WalkSpeedValue or 16
+	DashPowerValue = data.DashPowerValue or 120
+	JumpPowerValue = data.JumpPowerValue or 50
+
+	if data.ESPColor then
+		ESPColor = Color3.new(data.ESPColor.R, data.ESPColor.G, data.ESPColor.B)
+	end
+
+	-- PRIMERO aplicar el tema
+	if data.ThemeName then
+		for _, t in ipairs(GUIThemes) do
+			if t.Name == data.ThemeName then
+				CurrentThemeName = t.Name
+				ApplyTheme(t)
+				break
+			end
+		end
+	end
+
+	-- DESPUÉS actualizar toggles
+	local toggleStates = {
+		ESPEnabled, LineEnabled, RainbowEnabled, HealthEnabled, SkeletonEnabled,
+		HitboxEnabled, AimbotFOVEnabled, VisibleCheckEnabled,
+		FlyEnabled, NoclipEnabled, InfiniteJumpEnabled,
+		SpeedEnabled, JumpEnabled, DashEnabled, FPSPingEnabled
+	}
+
+	for i, state in ipairs(toggleStates) do
+		if activeToggles[i] then
+			activeToggles[i].setOn(state)
+		end
+	end
+
+	if targetValue then targetValue.Text = AimbotTargetMode end
+	if playerValue then playerValue.Text = AimbotPlayerTarget or "Todos" end
+	dashButton.Visible = DashEnabled
+
+	local sliderValues = {
+		FOVSize,
+		math.floor(AimbotSmoothness * 100),
+		HitboxSize,
+		math.floor(HitboxTransparency * 100),
+		WalkSpeedValue,
+		DashPowerValue,
+		JumpPowerValue
+	}
+
+	for i, val in ipairs(sliderValues) do
+		local s = sliderFills[i]
+		if s and s.Fill and s.ValueLabel then
+			local min = s.Min or 0
+			local max = s.Max or 100
+			local pos = math.clamp((val - min) / (max - min), 0, 1)
+			s.Fill.Size = UDim2.new(pos, 0, 1, 0)
+			s.ValueLabel.Text = tostring(val)
+		end
+	end
+
+	return true
+end
+
+local function DeleteConfig(name)
+	if not name or name == "" then return false end
+	local success = pcall(function()
+		delfile(GetConfigPath(name))
+	end)
+	return success
+end
+
+local function RefreshConfigList()
+	for _, child in pairs(configList:GetChildren()) do
+		if child:IsA("TextButton") then child:Destroy() end
+	end
+
+	local files = {}
+	pcall(function()
+		if listfiles then
+			files = listfiles("NehemiasHubConfigs") or {}
+		end
+	end)
+
+	for _, file in ipairs(files) do
+		local name = file:match("([^/\\]+)%.json$")
+		if name then
+			local btn = Instance.new("TextButton")
+			btn.Size = UDim2.new(1, -6, 0, 28)
+			btn.BackgroundColor3 = Theme.Header
+			btn.Text = name
+			btn.Font = Enum.Font.GothamBold
+			btn.TextSize = 11
+			btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+			btn.Parent = configList
+			btn.ZIndex = 51
+			Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 5)
+
+			btn.MouseButton1Click:Connect(function()
+				selectedConfigName = name
+				configSelectorValue.Text = name
+				configListOpen = false
+				configList.Visible = false
+				configList.Size = UDim2.new(1, 0, 0, 0)
+			end)
+		end
+	end
+
+	task.defer(function()
+		configList.CanvasSize = UDim2.fromOffset(0, configListLayout.AbsoluteContentSize.Y + 5)
+	end)
+end
+
+configArrow.MouseButton1Click:Connect(function()
+	configListOpen = not configListOpen
+	configList.Visible = configListOpen
+	if configListOpen then
+		RefreshConfigList()
+		local count = 0
+		pcall(function()
+			if listfiles then count = #listfiles("NehemiasHubConfigs") end
+		end)
+		local height = math.clamp(count * 30, 30, 120)
+		configList.Size = UDim2.new(1, 0, 0, height)
+	else
+		configList.Size = UDim2.new(1, 0, 0, 0)
+	end
+end)
+
+saveBtn.MouseButton1Click:Connect(function()
+	local name = nameBox.Text:gsub("%s+", "")
+	if name == "" then return end
+	if SaveConfig(name) then
+		nameBox.Text = ""
+		RefreshConfigList()
+		selectedConfigName = name
+		configSelectorValue.Text = name
+	end
+end)
+
+loadBtn.MouseButton1Click:Connect(function()
+	if selectedConfigName then
+		LoadConfig(selectedConfigName)
+	end
+end)
+
+deleteBtn.MouseButton1Click:Connect(function()
+	if selectedConfigName then
+		if DeleteConfig(selectedConfigName) then
+			selectedConfigName = nil
+			configSelectorValue.Text = "Seleccionar configuración"
+			RefreshConfigList()
+			configListOpen = false
+			configList.Visible = false
+			configList.Size = UDim2.new(1, 0, 0, 0)
+		end
+	end
+end)
 
 --// TABS
 featuresTab.MouseButton1Click:Connect(function()
 	featuresTab.BackgroundColor3 = Theme.Accent
 	featuresTab.TextColor3 = Color3.fromRGB(255, 255, 255)
-
 	settingsTab.BackgroundColor3 = Color3.fromRGB(25, 35, 50)
 	settingsTab.TextColor3 = Color3.fromRGB(160, 190, 220)
-
 	featuresContent.Visible = true
 	settingsContent.Visible = false
 end)
@@ -1189,121 +1302,55 @@ end)
 settingsTab.MouseButton1Click:Connect(function()
 	settingsTab.BackgroundColor3 = Theme.Accent
 	settingsTab.TextColor3 = Color3.fromRGB(255, 255, 255)
-
 	featuresTab.BackgroundColor3 = Color3.fromRGB(25, 35, 50)
 	featuresTab.TextColor3 = Color3.fromRGB(160, 190, 220)
-
 	featuresContent.Visible = false
 	settingsContent.Visible = true
 end)
 
---// DASH SYSTEM
+--// DASH
 local function DoDash()
-	if not DashEnabled or not DashReady then
-		return
-	end
-
+	if not DashEnabled or not DashReady then return end
 	local char = LocalPlayer.Character
-
-	if not char then
-		return
-	end
-
+	if not char then return end
 	local root = char:FindFirstChild("HumanoidRootPart")
 	local humanoid = char:FindFirstChildOfClass("Humanoid")
-
-	if not root or not humanoid or humanoid.Health <= 0 then
-		return
-	end
+	if not root or not humanoid or humanoid.Health <= 0 then return end
 
 	DashReady = false
-
 	local look = root.CFrame.LookVector
-
-	local direction = Vector3.new(
-		look.X,
-		0,
-		look.Z
-	)
-
-	if direction.Magnitude <= 0 then
-		DashReady = true
-		return
-	end
-
+	local direction = Vector3.new(look.X, 0, look.Z)
+	if direction.Magnitude <= 0 then DashReady = true return end
 	direction = direction.Unit
 
-	humanoid:ChangeState(
-		Enum.HumanoidStateType.Jumping
-	)
+	humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
 
 	local dashVelocity = Instance.new("BodyVelocity")
-
 	dashVelocity.Name = "DashVelocity"
-
-	dashVelocity.MaxForce = Vector3.new(
-		1000000,
-		1000000,
-		1000000
-	)
-
+	dashVelocity.MaxForce = Vector3.new(1000000, 1000000, 1000000)
 	dashVelocity.P = 100000
-
-	dashVelocity.Velocity = Vector3.new(
-		direction.X * DashPowerValue,
-		22, -- altura baja del Dash
-		direction.Z * DashPowerValue
-	)
-
+	dashVelocity.Velocity = Vector3.new(direction.X * DashPowerValue, 22, direction.Z * DashPowerValue)
 	dashVelocity.Parent = root
 
 	task.delay(0.22, function()
-		if dashVelocity and dashVelocity.Parent then
-			dashVelocity:Destroy()
-		end
+		if dashVelocity and dashVelocity.Parent then dashVelocity:Destroy() end
 	end)
 
 	local originalSize = dashButton.Size
-
-	local dashTween1 = TweenService:Create(
-		dashButton,
-		TweenInfo.new(
-			0.10,
-			Enum.EasingStyle.Quad,
-			Enum.EasingDirection.Out
-		),
-		{
-			Position = UDim2.new(0, 112, 0.56, 0),
-			Size = UDim2.fromOffset(
-				DASH_BUTTON_SIZE + 6,
-				DASH_BUTTON_SIZE + 6
-			)
-		}
-	)
-
-	local dashTween2 = TweenService:Create(
-		dashButton,
-		TweenInfo.new(
-			0.18,
-			Enum.EasingStyle.Quad,
-			Enum.EasingDirection.Out
-		),
-		{
-			Position = UDim2.new(0, 105, 0.56, 0),
-			Size = originalSize
-		}
-	)
-
+	local dashTween1 = TweenService:Create(dashButton, TweenInfo.new(0.10, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		Position = UDim2.new(0, 112, 0.56, 0),
+		Size = UDim2.fromOffset(DASH_BUTTON_SIZE + 6, DASH_BUTTON_SIZE + 6)
+	})
+	local dashTween2 = TweenService:Create(dashButton, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		Position = UDim2.new(0, 105, 0.56, 0),
+		Size = originalSize
+	})
 	dashTween1:Play()
-
 	dashTween1.Completed:Connect(function()
-		if dashButton and dashButton.Parent then
-			dashTween2:Play()
-		end
+		if dashButton and dashButton.Parent then dashTween2:Play() end
 	end)
 
 	local cooldownOverlay = Instance.new("Frame")
-
 	cooldownOverlay.Name = "CooldownOverlay"
 	cooldownOverlay.Size = UDim2.fromScale(1, 1)
 	cooldownOverlay.Position = UDim2.fromScale(0, 0)
@@ -1312,46 +1359,27 @@ local function DoDash()
 	cooldownOverlay.BorderSizePixel = 0
 	cooldownOverlay.ZIndex = 3005
 	cooldownOverlay.Parent = dashButton
-
-	local overlayCorner = Instance.new("UICorner")
-	overlayCorner.CornerRadius = UDim.new(1, 0)
-	overlayCorner.Parent = cooldownOverlay
+	Instance.new("UICorner", cooldownOverlay).CornerRadius = UDim.new(1, 0)
 
 	task.spawn(function()
 		local startTime = tick()
-
 		while tick() - startTime < DashCooldown do
-			if not dashButton.Parent then
-				break
-			end
-
-			local remaining =
-				DashCooldown - (tick() - startTime)
-
-			dashCooldownText.Text =
-				string.format("%.1f", math.max(remaining, 0))
-
+			if not dashButton.Parent then break end
+			local remaining = DashCooldown - (tick() - startTime)
+			dashCooldownText.Text = string.format("%.1f", math.max(remaining, 0))
 			task.wait(0.05)
 		end
-
 		dashCooldownText.Text = ""
-
-		if cooldownOverlay and cooldownOverlay.Parent then
-			cooldownOverlay:Destroy()
-		end
-
+		if cooldownOverlay and cooldownOverlay.Parent then cooldownOverlay:Destroy() end
 		DashReady = true
 	end)
 end
 
 dashButton.MouseButton1Click:Connect(DoDash)
 
---// ESP SYSTEM
+--// ESP
 local function create(plr)
-	if plr == LocalPlayer then
-		return
-	end
-
+	if plr == LocalPlayer then return end
 	local h = Instance.new("Highlight")
 	h.FillTransparency = 0.5
 	h.OutlineTransparency = 0
@@ -1383,9 +1411,7 @@ local function create(plr)
 	healthBar.Visible = false
 	healthBar.ZIndex = 501
 	healthBar.Parent = gui
-
-	Instance.new("UICorner", healthBar).CornerRadius =
-		UDim.new(0, 3)
+	Instance.new("UICorner", healthBar).CornerRadius = UDim.new(0, 3)
 
 	local healthText = Instance.new("TextLabel")
 	healthText.BackgroundTransparency = 1
@@ -1411,7 +1437,6 @@ local function create(plr)
 	distance.Parent = gui
 
 	local skeleton = {}
-
 	for i = 1, 14 do
 		local l = Instance.new("Frame")
 		l.BorderSizePixel = 0
@@ -1423,15 +1448,7 @@ local function create(plr)
 		skeleton[i] = l
 	end
 
-	ESP[plr] = {
-		H = h,
-		N = name,
-		L = line,
-		HB = healthBar,
-		HT = healthText,
-		D = distance,
-		S = skeleton
-	}
+	ESP[plr] = {H = h, N = name, L = line, HB = healthBar, HT = healthText, D = distance, S = skeleton}
 end
 
 local function remove(plr)
@@ -1443,256 +1460,101 @@ local function remove(plr)
 			ESP[plr].HB:Destroy()
 			ESP[plr].HT:Destroy()
 			ESP[plr].D:Destroy()
-
-			for _, l in pairs(ESP[plr].S) do
-				l:Destroy()
-			end
+			for _, l in pairs(ESP[plr].S) do l:Destroy() end
 		end)
-
 		ESP[plr] = nil
 	end
-
 	OriginalSizes[plr] = nil
-
 	if HitboxParts[plr] then
 		HitboxParts[plr]:Destroy()
 		HitboxParts[plr] = nil
 	end
 end
 
-for _, p in pairs(Players:GetPlayers()) do
-	create(p)
-end
-
+for _, p in pairs(Players:GetPlayers()) do create(p) end
 Players.PlayerAdded:Connect(create)
 Players.PlayerRemoving:Connect(remove)
 
 local function drawLine(line, p1, p2, color)
-	if not p1 or not p2 then
-		line.Visible = false
-		return
-	end
-
+	if not p1 or not p2 then line.Visible = false return end
 	local dx = p2.X - p1.X
 	local dy = p2.Y - p1.Y
-
-	local length = math.sqrt(
-		dx * dx + dy * dy
-	)
-
-	line.Size = UDim2.fromOffset(
-		math.max(length, 1),
-		2
-	)
-
-	line.Position = UDim2.fromOffset(
-		(p1.X + p2.X) / 2,
-		(p1.Y + p2.Y) / 2
-	)
-
-	line.Rotation = math.deg(
-		math.atan2(dy, dx)
-	)
-
+	local length = math.sqrt(dx * dx + dy * dy)
+	line.Size = UDim2.fromOffset(math.max(length, 1), 2)
+	line.Position = UDim2.fromOffset((p1.X + p2.X) / 2, (p1.Y + p2.Y) / 2)
+	line.Rotation = math.deg(math.atan2(dy, dx))
 	line.BackgroundColor3 = color
 	line.Visible = true
 end
 
---// AIMBOT TARGET PART
 local function GetAimbotPart(character)
-	if not character then
-		return nil
-	end
-
+	if not character then return nil end
 	if AimbotTargetMode == "Head" then
 		return character:FindFirstChild("Head")
-
 	elseif AimbotTargetMode == "Torso" then
-		return character:FindFirstChild("UpperTorso")
-			or character:FindFirstChild("Torso")
-			or character:FindFirstChild("HumanoidRootPart")
-
+		return character:FindFirstChild("UpperTorso") or character:FindFirstChild("Torso") or character:FindFirstChild("HumanoidRootPart")
 	elseif AimbotTargetMode == "Pies" then
-		return character:FindFirstChild("LeftFoot")
-			or character:FindFirstChild("LeftLowerLeg")
-			or character:FindFirstChild("Left Leg")
-			or character:FindFirstChild("HumanoidRootPart")
+		return character:FindFirstChild("LeftFoot") or character:FindFirstChild("LeftLowerLeg") or character:FindFirstChild("Left Leg") or character:FindFirstChild("HumanoidRootPart")
 	end
-
 	return character:FindFirstChild("Head")
 end
 
---// VISIBLE CHECK
 local function IsTargetVisible(part)
-	if not VisibleCheckEnabled then
-		return true
-	end
-
-	if not part then
-		return false
-	end
-
+	if not VisibleCheckEnabled then return true end
+	if not part then return false end
 	local character = part.Parent
-
-	if not character then
-		return false
-	end
-
+	if not character then return false end
 	local origin = Camera.CFrame.Position
 	local direction = part.Position - origin
-
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
-	params.FilterDescendantsInstances = {
-		LocalPlayer.Character,
-		Camera
-	}
+	params.FilterDescendantsInstances = {LocalPlayer.Character, Camera}
 	params.IgnoreWater = true
-
-	local result = workspace:Raycast(
-		origin,
-		direction,
-		params
-	)
-
-	if not result then
-		return true
-	end
-
+	local result = workspace:Raycast(origin, direction, params)
+	if not result then return true end
 	return result.Instance:IsDescendantOf(character)
 end
 
---// JUGADOR SELECCIONADO
 local function GetSelectedAimbotPlayer()
-	if not AimbotPlayerTarget then
-		return nil
+	if not AimbotPlayerTarget then return nil end
+	local player = Players:FindFirstChild(AimbotPlayerTarget)
+	if player and player ~= LocalPlayer and player.Character then
+		local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+		if humanoid and humanoid.Health > 0 then return player end
 	end
-
-	local player = Players:FindFirstChild(
-		AimbotPlayerTarget
-	)
-
-	if player
-		and player ~= LocalPlayer
-		and player.Character then
-
-		local humanoid =
-			player.Character:FindFirstChildOfClass(
-				"Humanoid"
-			)
-
-		if humanoid
-			and humanoid.Health > 0 then
-
-			return player
-		end
-	end
-
 	return nil
 end
 
---// OBTENER TARGET
 local function GetClosestTargetInFOV()
-	local center = Vector2.new(
-		Camera.ViewportSize.X / 2,
-		Camera.ViewportSize.Y / 2
-	)
-
+	local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
 	local maxDist = FOVSize / 2
+	local selectedPlayer = GetSelectedAimbotPlayer()
 
-	local selectedPlayer =
-		GetSelectedAimbotPlayer()
-
-	--// TARGET ESPECÍFICO
 	if selectedPlayer then
-		local part =
-			GetAimbotPart(
-				selectedPlayer.Character
-			)
-
-		local humanoid =
-			selectedPlayer.Character:
-			FindFirstChildOfClass(
-				"Humanoid"
-			)
-
-		if part
-			and humanoid
-			and humanoid.Health > 0
-			and IsTargetVisible(part) then
-
-			local pos, onScreen =
-				Camera:WorldToViewportPoint(
-					part.Position
-				)
-
+		local part = GetAimbotPart(selectedPlayer.Character)
+		local humanoid = selectedPlayer.Character:FindFirstChildOfClass("Humanoid")
+		if part and humanoid and humanoid.Health > 0 and IsTargetVisible(part) then
+			local pos, onScreen = Camera:WorldToViewportPoint(part.Position)
 			if onScreen then
-				local screenPos =
-					Vector2.new(
-						pos.X,
-						pos.Y
-					)
-
-				local distance =
-					(
-						center -
-						screenPos
-					).Magnitude
-
-				if distance <= maxDist then
-					return part
-				end
+				local screenPos = Vector2.new(pos.X, pos.Y)
+				local distance = (center - screenPos).Magnitude
+				if distance <= maxDist then return part end
 			end
 		end
-
 		return nil
 	end
 
-	--// TODOS
 	local closest = nil
 	local shortest = maxDist
-
-	for _, player in pairs(
-		Players:GetPlayers()
-	) do
-
-		if player ~= LocalPlayer
-			and player.Character then
-
-			local humanoid =
-				player.Character:
-				FindFirstChildOfClass(
-					"Humanoid"
-				)
-
-			local part =
-				GetAimbotPart(
-					player.Character
-				)
-
-			if part
-				and humanoid
-				and humanoid.Health > 0
-				and IsTargetVisible(part) then
-
-				local pos, onScreen =
-					Camera:WorldToViewportPoint(
-						part.Position
-					)
-
+	for _, player in pairs(Players:GetPlayers()) do
+		if player ~= LocalPlayer and player.Character then
+			local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+			local part = GetAimbotPart(player.Character)
+			if part and humanoid and humanoid.Health > 0 and IsTargetVisible(part) then
+				local pos, onScreen = Camera:WorldToViewportPoint(part.Position)
 				if onScreen then
-					local screenPos =
-						Vector2.new(
-							pos.X,
-							pos.Y
-						)
-
-					local distance =
-						(
-							center -
-							screenPos
-						).Magnitude
-
+					local screenPos = Vector2.new(pos.X, pos.Y)
+					local distance = (center - screenPos).Magnitude
 					if distance < shortest then
 						shortest = distance
 						closest = part
@@ -1701,7 +1563,6 @@ local function GetClosestTargetInFOV()
 			end
 		end
 	end
-
 	return closest
 end
 
@@ -1710,204 +1571,82 @@ local BodyVelocity, BodyGyro
 
 local function UpdateFly()
 	local char = LocalPlayer.Character
-
-	if not char
-		or not char:FindFirstChild(
-			"HumanoidRootPart"
-		) then
-		return
-	end
-
+	if not char or not char:FindFirstChild("HumanoidRootPart") then return end
 	local root = char.HumanoidRootPart
-
-	local humanoid =
-		char:FindFirstChildOfClass(
-			"Humanoid"
-		)
+	local humanoid = char:FindFirstChildOfClass("Humanoid")
 
 	if FlyEnabled then
 		if not BodyVelocity then
 			BodyVelocity = Instance.new("BodyVelocity")
-
-			BodyVelocity.MaxForce =
-				Vector3.new(
-					9e9,
-					9e9,
-					9e9
-				)
-
+			BodyVelocity.MaxForce = Vector3.new(9e9, 9e9, 9e9)
 			BodyVelocity.Parent = root
-
 			BodyGyro = Instance.new("BodyGyro")
-
-			BodyGyro.MaxTorque =
-				Vector3.new(
-					9e9,
-					9e9,
-					9e9
-				)
-
+			BodyGyro.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
 			BodyGyro.P = 9e4
 			BodyGyro.Parent = root
-
-			if humanoid then
-				humanoid.PlatformStand = true
-			end
+			if humanoid then humanoid.PlatformStand = true end
 		end
-
 		local cam = Camera.CFrame
-
-		local move =
-			humanoid
-			and humanoid.MoveDirection
-			or Vector3.zero
-
-		local dir =
-			(cam.LookVector * -move.Z)
-			+
-			(cam.RightVector * move.X)
-
-		BodyVelocity.Velocity =
-			dir.Magnitude > 0
-			and dir.Unit * FlySpeedValue
-			or Vector3.zero
-
+		local move = humanoid and humanoid.MoveDirection or Vector3.zero
+		local dir = (cam.LookVector * -move.Z) + (cam.RightVector * move.X)
+		BodyVelocity.Velocity = dir.Magnitude > 0 and dir.Unit * FlySpeedValue or Vector3.zero
 		BodyGyro.CFrame = cam
 	else
-		if BodyVelocity then
-			BodyVelocity:Destroy()
-			BodyVelocity = nil
-		end
-
-		if BodyGyro then
-			BodyGyro:Destroy()
-			BodyGyro = nil
-		end
-
-		if humanoid then
-			humanoid.PlatformStand = false
-		end
+		if BodyVelocity then BodyVelocity:Destroy() BodyVelocity = nil end
+		if BodyGyro then BodyGyro:Destroy() BodyGyro = nil end
+		if humanoid then humanoid.PlatformStand = false end
 	end
 end
 
 --// HITBOX
 local function UpdateHitbox()
 	for _, player in pairs(Players:GetPlayers()) do
-		if player ~= LocalPlayer
-			and player.Character then
-
-			local head =
-				player.Character:
-				FindFirstChild("Head")
-
-			local humanoid =
-				player.Character:
-				FindFirstChildOfClass(
-					"Humanoid"
-				)
-
-			if head
-				and humanoid
-				and humanoid.Health > 0 then
-
+		if player ~= LocalPlayer and player.Character then
+			local head = player.Character:FindFirstChild("Head")
+			local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+			if head and humanoid and humanoid.Health > 0 then
 				if HitboxEnabled then
-
 					if not HitboxParts[player] then
 						local part = Instance.new("Part")
-
-						part.Name =
-							"Hitbox_" ..
-							player.Name
-
-						part.Shape =
-							Enum.PartType.Block
-
-						part.Size =
-							Vector3.new(
-								HitboxSize,
-								HitboxSize,
-								HitboxSize
-							)
-
-						part.Transparency =
-							HitboxTransparency
-
-						part.Color =
-							Color3.fromRGB(
-								255,
-								50,
-								50
-							)
-
-						part.Material =
-							Enum.Material.Neon
-
+						part.Name = "Hitbox_" .. player.Name
+						part.Shape = Enum.PartType.Block
+						part.Size = Vector3.new(HitboxSize, HitboxSize, HitboxSize)
+						part.Transparency = HitboxTransparency
+						part.Color = Color3.fromRGB(255, 50, 50)
+						part.Material = Enum.Material.Neon
 						part.CanCollide = false
 						part.Anchored = false
 						part.Massless = true
 						part.CastShadow = false
 						part.Parent = player.Character
-
-						local weld =
-							Instance.new("Weld")
-
+						local weld = Instance.new("Weld")
 						weld.Part0 = head
 						weld.Part1 = part
 						weld.C0 = CFrame.new()
 						weld.Parent = part
-
 						HitboxParts[player] = part
 					else
-						local part =
-							HitboxParts[player]
-
-						if part
-							and part.Parent then
-
-							part.Size =
-								Vector3.new(
-									HitboxSize,
-									HitboxSize,
-									HitboxSize
-								)
-
-							part.Transparency =
-								HitboxTransparency
+						local part = HitboxParts[player]
+						if part and part.Parent then
+							part.Size = Vector3.new(HitboxSize, HitboxSize, HitboxSize)
+							part.Transparency = HitboxTransparency
 						end
 					end
-
-					if not OriginalSizes[player] then
-						OriginalSizes[player] =
-							head.Size
-					end
-
-					head.Size =
-						Vector3.new(
-							HitboxSize * 0.9,
-							HitboxSize * 0.9,
-							HitboxSize * 0.9
-						)
-
-					head.Transparency =
-						HitboxTransparency
-
+					if not OriginalSizes[player] then OriginalSizes[player] = head.Size end
+					head.Size = Vector3.new(HitboxSize * 0.9, HitboxSize * 0.9, HitboxSize * 0.9)
+					head.Transparency = HitboxTransparency
 					head.CanCollide = false
 					head.Massless = true
-
 				else
 					if HitboxParts[player] then
 						HitboxParts[player]:Destroy()
 						HitboxParts[player] = nil
 					end
-
 					if OriginalSizes[player] then
-						head.Size =
-							OriginalSizes[player]
-
+						head.Size = OriginalSizes[player]
 						head.Transparency = 0
 						head.CanCollide = true
 						head.Massless = false
-
 						OriginalSizes[player] = nil
 					end
 				end
@@ -1923,289 +1662,87 @@ local currentFPS = 0
 
 RunService.RenderStepped:Connect(function()
 	frames += 1
-
 	local now = tick()
 
 	if now - lastStatsUpdate >= 1 then
 		currentFPS = frames
 		frames = 0
 		lastStatsUpdate = now
-
 		local ping = 0
-
 		pcall(function()
-			ping = math.floor(
-				Stats.Network.ServerStatsItem[
-					"Data Ping"
-				]:GetValue()
-			)
+			ping = math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue())
 		end)
-
-		fpsText.Text =
-			"FPS: " ..
-			currentFPS
-
-		fpsText.TextColor3 =
-			currentFPS < 30
-			and Color3.fromRGB(255, 0, 0)
-			or Color3.fromRGB(0, 255, 0)
-
-		pingText.Text =
-			"PING: " ..
-			ping ..
-			" ms"
-
-		pingText.TextColor3 =
-			ping >= 250
-			and Color3.fromRGB(255, 0, 0)
-			or Color3.fromRGB(0, 255, 0)
+		fpsText.Text = "FPS: " .. currentFPS
+		fpsText.TextColor3 = currentFPS < 30 and Color3.fromRGB(255, 0, 0) or Color3.fromRGB(0, 255, 0)
+		pingText.Text = "PING: " .. ping .. " ms"
+		pingText.TextColor3 = ping >= 250 and Color3.fromRGB(255, 0, 0) or Color3.fromRGB(0, 255, 0)
 	end
 
 	statsFrame.Visible = FPSPingEnabled
-
-	fovCircle.Size =
-		UDim2.fromOffset(
-			FOVSize,
-			FOVSize
-		)
-
-	fovCircle.Visible =
-		AimbotFOVEnabled
+	fovCircle.Size = UDim2.fromOffset(FOVSize, FOVSize)
+	fovCircle.Visible = AimbotFOVEnabled
 
 	Hue = (Hue + 1) % 360
-
-	local baseColor =
-		RainbowEnabled
-		and Color3.fromHSV(
-			Hue / 360,
-			1,
-			1
-		)
-		or ESPColor
+	local baseColor = RainbowEnabled and Color3.fromHSV(Hue / 360, 1, 1) or ESPColor
 
 	for plr, o in pairs(ESP) do
 		local c = plr.Character
-
-		local hrp =
-			c and c:FindFirstChild(
-				"HumanoidRootPart"
-			)
-
-		local hum =
-			c and c:FindFirstChildOfClass(
-				"Humanoid"
-			)
-
-		local head =
-			c and c:FindFirstChild("Head")
-
-		local myHRP =
-			LocalPlayer.Character
-			and LocalPlayer.Character:
-				FindFirstChild(
-					"HumanoidRootPart"
-				)
-
+		local hrp = c and c:FindFirstChild("HumanoidRootPart")
+		local hum = c and c:FindFirstChildOfClass("Humanoid")
+		local head = c and c:FindFirstChild("Head")
+		local myHRP = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
 		local inRange, dist = false, 0
 
 		if myHRP and hrp then
-			dist =
-				(
-					myHRP.Position -
-					hrp.Position
-				).Magnitude
-
-			inRange =
-				dist <= ESPRadius
+			dist = (myHRP.Position - hrp.Position).Magnitude
+			inRange = dist <= ESPRadius
 		end
 
-		if
-			(
-				ESPEnabled
-				or LineEnabled
-				or HealthEnabled
-				or SkeletonEnabled
-			)
-			and hrp
-			and hum
-			and hum.Health > 0
-			and inRange
-		then
-
+		if (ESPEnabled or LineEnabled or HealthEnabled or SkeletonEnabled) and hrp and hum and hum.Health > 0 and inRange then
 			local col = baseColor
-
 			o.H.Adornee = c
 			o.H.Enabled = ESPEnabled
 			o.H.FillColor = col
 			o.H.OutlineColor = col
 
-			local headWorld =
-				head
-				and (
-					head.Position +
-					Vector3.new(
-						0,
-						0.25,
-						0
-					)
-				)
-				or (
-					hrp.Position +
-					Vector3.new(
-						0,
-						3,
-						0
-					)
-				)
-
-			local feetWorld =
-				hrp.Position -
-				Vector3.new(
-					0,
-					3,
-					0
-				)
-
-			local headScreen, headOn =
-				Camera:WorldToViewportPoint(
-					headWorld
-				)
-
-			local feetScreen, feetOn =
-				Camera:WorldToViewportPoint(
-					feetWorld
-				)
+			local headWorld = head and (head.Position + Vector3.new(0, 0.25, 0)) or (hrp.Position + Vector3.new(0, 3, 0))
+			local feetWorld = hrp.Position - Vector3.new(0, 3, 0)
+			local headScreen, headOn = Camera:WorldToViewportPoint(headWorld)
+			local feetScreen, feetOn = Camera:WorldToViewportPoint(feetWorld)
 
 			if headOn or feetOn then
-
 				if headOn and ESPEnabled then
 					o.N.Text = plr.Name
 					o.N.TextColor3 = col
-
-					o.N.Position =
-						UDim2.fromOffset(
-							headScreen.X,
-							headScreen.Y - 6
-						)
-
+					o.N.Position = UDim2.fromOffset(headScreen.X, headScreen.Y - 6)
 					o.N.Visible = true
 				else
 					o.N.Visible = false
 				end
 
 				if LineEnabled and feetOn then
-					local sx =
-						Camera.ViewportSize.X / 2
-
-					local sy =
-						Camera.ViewportSize.Y
-
-					local dx =
-						feetScreen.X - sx
-
-					local dy =
-						feetScreen.Y - sy
-
-					o.L.Size =
-						UDim2.fromOffset(
-							math.max(
-								math.sqrt(
-									dx * dx +
-									dy * dy
-								),
-								1
-							),
-							2
-						)
-
-					o.L.Position =
-						UDim2.fromOffset(
-							(sx + feetScreen.X) / 2,
-							(sy + feetScreen.Y) / 2
-						)
-
-					o.L.Rotation =
-						math.deg(
-							math.atan2(
-								dy,
-								dx
-							)
-						)
-
+					local sx = Camera.ViewportSize.X / 2
+					local sy = Camera.ViewportSize.Y
+					local dx = feetScreen.X - sx
+					local dy = feetScreen.Y - sy
+					o.L.Size = UDim2.fromOffset(math.max(math.sqrt(dx * dx + dy * dy), 1), 2)
+					o.L.Position = UDim2.fromOffset((sx + feetScreen.X) / 2, (sy + feetScreen.Y) / 2)
+					o.L.Rotation = math.deg(math.atan2(dy, dx))
 					o.L.BackgroundColor3 = col
 					o.L.Visible = true
 				else
 					o.L.Visible = false
 				end
 
-				if HealthEnabled
-					and headOn
-					and feetOn then
-
-					local hp =
-						math.clamp(
-							hum.Health /
-								hum.MaxHealth,
-							0,
-							1
-						)
-
+				if HealthEnabled and headOn and feetOn then
+					local hp = math.clamp(hum.Health / hum.MaxHealth, 0, 1)
 					local barH = 65
-
-					o.HB.Size =
-						UDim2.fromOffset(
-							7,
-							barH * hp
-						)
-
-					o.HB.Position =
-						UDim2.fromOffset(
-							headScreen.X - 28,
-							(
-								headScreen.Y +
-								feetScreen.Y
-							) / 2
-							- barH / 2
-							+ barH *
-								(1 - hp)
-						)
-
-					o.HB.BackgroundColor3 =
-						hp > 0.6
-						and Color3.fromRGB(
-							0,
-							255,
-							0
-						)
-						or hp > 0.3
-						and Color3.fromRGB(
-							255,
-							140,
-							0
-						)
-						or Color3.fromRGB(
-							255,
-							0,
-							0
-						)
-
+					o.HB.Size = UDim2.fromOffset(7, barH * hp)
+					o.HB.Position = UDim2.fromOffset(headScreen.X - 28, (headScreen.Y + feetScreen.Y) / 2 - barH / 2 + barH * (1 - hp))
+					o.HB.BackgroundColor3 = hp > 0.6 and Color3.fromRGB(0, 255, 0) or hp > 0.3 and Color3.fromRGB(255, 140, 0) or Color3.fromRGB(255, 0, 0)
 					o.HB.Visible = true
-
-					o.HT.Text =
-						math.floor(
-							hp * 100
-						) ..
-						"%"
-
-					o.HT.Position =
-						UDim2.fromOffset(
-							headScreen.X - 24,
-							(
-								headScreen.Y +
-								feetScreen.Y
-							) / 2
-						)
-
+					o.HT.Text = math.floor(hp * 100) .. "%"
+					o.HT.Position = UDim2.fromOffset(headScreen.X - 24, (headScreen.Y + feetScreen.Y) / 2)
 					o.HT.Visible = true
 				else
 					o.HB.Visible = false
@@ -2213,44 +1750,22 @@ RunService.RenderStepped:Connect(function()
 				end
 
 				if feetOn then
-					o.D.Text =
-						math.floor(dist) ..
-						" studs"
-
+					o.D.Text = math.floor(dist) .. " studs"
 					o.D.TextColor3 = col
-
-					o.D.Position =
-						UDim2.fromOffset(
-							feetScreen.X,
-							feetScreen.Y + 3
-						)
-
+					o.D.Position = UDim2.fromOffset(feetScreen.X, feetScreen.Y + 3)
 					o.D.Visible = true
 				else
 					o.D.Visible = false
 				end
 
 				if SkeletonEnabled then
-
 					local function gp(n)
 						local p = c:FindFirstChild(n)
-
 						if p then
-							local pos, on =
-								Camera:
-								WorldToViewportPoint(
-									p.Position
-								)
-
-							if on then
-								return Vector2.new(
-									pos.X,
-									pos.Y
-								)
-							end
+							local pos, on = Camera:WorldToViewportPoint(p.Position)
+							if on then return Vector2.new(pos.X, pos.Y) end
 						end
 					end
-
 					local connections = {
 						{gp("Head"), gp("UpperTorso") or gp("Torso")},
 						{gp("UpperTorso") or gp("Torso"), gp("LeftUpperArm") or gp("Left Arm")},
@@ -2267,28 +1782,16 @@ RunService.RenderStepped:Connect(function()
 						{gp("RightUpperLeg") or gp("Right Leg"), gp("RightLowerLeg") or gp("Right Leg")},
 						{gp("RightLowerLeg") or gp("Right Leg"), gp("RightFoot")},
 					}
-
 					for i = 1, #o.S do
 						local conn = connections[i]
-
-						if conn
-							and conn[1]
-							and conn[2] then
-
-							drawLine(
-								o.S[i],
-								conn[1],
-								conn[2],
-								col
-							)
+						if conn and conn[1] and conn[2] then
+							drawLine(o.S[i], conn[1], conn[2], col)
 						else
 							o.S[i].Visible = false
 						end
 					end
 				else
-					for _, l in pairs(o.S) do
-						l.Visible = false
-					end
+					for _, l in pairs(o.S) do l.Visible = false end
 				end
 			else
 				o.N.Visible = false
@@ -2296,10 +1799,7 @@ RunService.RenderStepped:Connect(function()
 				o.HB.Visible = false
 				o.HT.Visible = false
 				o.D.Visible = false
-
-				for _, l in pairs(o.S) do
-					l.Visible = false
-				end
+				for _, l in pairs(o.S) do l.Visible = false end
 			end
 		else
 			o.H.Enabled = false
@@ -2308,38 +1808,17 @@ RunService.RenderStepped:Connect(function()
 			o.HB.Visible = false
 			o.HT.Visible = false
 			o.D.Visible = false
-
-			for _, l in pairs(o.S) do
-				l.Visible = false
-			end
+			for _, l in pairs(o.S) do l.Visible = false end
 		end
 	end
 
-	--// AIMBOT
 	if AimbotFOVEnabled then
-		local target =
-			GetClosestTargetInFOV()
-
+		local target = GetClosestTargetInFOV()
 		if target then
 			currentTarget = target
-
 			local cam = Camera.CFrame
-
-			local sticky =
-				math.clamp(
-					AimbotSmoothness + 0.35,
-					0.55,
-					0.85
-				)
-
-			Camera.CFrame =
-				cam:Lerp(
-					CFrame.new(
-						cam.Position,
-						target.Position
-					),
-					sticky
-				)
+			local sticky = math.clamp(AimbotSmoothness + 0.35, 0.55, 0.85)
+			Camera.CFrame = cam:Lerp(CFrame.new(cam.Position, target.Position), sticky)
 		else
 			currentTarget = nil
 		end
@@ -2350,50 +1829,25 @@ RunService.RenderStepped:Connect(function()
 	UpdateFly()
 	UpdateHitbox()
 
-	if NoclipEnabled
-		and LocalPlayer.Character then
-
-		for _, p in pairs(
-			LocalPlayer.Character:
-			GetDescendants()
-		) do
-
-			if p:IsA("BasePart") then
-				p.CanCollide = false
-			end
+	if NoclipEnabled and LocalPlayer.Character then
+		for _, p in pairs(LocalPlayer.Character:GetDescendants()) do
+			if p:IsA("BasePart") then p.CanCollide = false end
 		end
 	end
 
-	--// SPEED + JUMP (solo cuando están activados)
 	if LocalPlayer.Character then
 		local h = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
 		if h then
-			if SpeedEnabled then
-				h.WalkSpeed = WalkSpeedValue
-			end
-			if JumpEnabled then
-				h.JumpPower = JumpPowerValue
-			end
+			if SpeedEnabled then h.WalkSpeed = WalkSpeedValue end
+			if JumpEnabled then h.JumpPower = JumpPowerValue end
 		end
 	end
 end)
 
---// INFINITE JUMP
 UserInputService.JumpRequest:Connect(function()
-	if InfiniteJumpEnabled
-		and LocalPlayer.Character
-		and LocalPlayer.Character:
-			FindFirstChildOfClass(
-				"Humanoid"
-			) then
-
-		LocalPlayer.Character.Humanoid:
-			ChangeState(
-				Enum.HumanoidStateType.Jumping
-			)
+	if InfiniteJumpEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
+		LocalPlayer.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
 	end
 end)
 
-print(
-	"Universal Script v2.9 - Aimbot Target + Player + Visible Check"
-)
+print("Universal Script v2.9 - Toggles Theme Fix")
